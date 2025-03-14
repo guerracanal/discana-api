@@ -3,55 +3,25 @@ name: Deploy API to GCP
 on:
   push:
     branches:
-      - main
+      - main  # Ajusta a la rama que uses para producción
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    # Checkout del código desde el repositorio
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: 'latest'
+          project_id: discana
+          service_account_key: ${{ secrets.GCP_CREDENTIALS }}
 
-    # Verificar la estructura del directorio después del checkout
-    - name: Verify the directory structure
-      run: ls -la
+      - name: Set environment variable for Mongo URI
+        run: echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
 
-    # Configuración del SDK de Google Cloud
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-      with:
-        version: 'latest'
-
-    # Autenticación con GCP usando las credenciales
-    - name: Authenticate to GCP
-      uses: google-github-actions/auth@v1
-      with:
-        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-
-    # Configurar la URI de MongoDB como variable de entorno
-    - name: Set environment variable for Mongo URI
-      run: echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
-
-    # Construir la imagen Docker
-    - name: Build Docker image
-      run: |
-        PROJECT_NAME=discana
-        REGION=europe-west1
-        API_IMAGE_NAME=discana-api
-        API_CONTAINER_NAME=gcr.io/$PROJECT_NAME/$API_IMAGE_NAME
-        API_DOCKER_CONTEXT=.  # (.) ya que el Dockerfile está en el directorio raíz
-
-        # Construir y etiquetar la imagen Docker en Google Container Registry
-        gcloud builds submit --tag $API_CONTAINER_NAME $API_DOCKER_CONTEXT
-
-    # Desplegar la imagen a Cloud Run
-    - name: Deploy to Cloud Run
-      run: |
-        API_SERVICE_NAME=discana-api
-        gcloud run deploy $API_SERVICE_NAME \
-          --image gcr.io/$PROJECT_NAME/$API_IMAGE_NAME \
-          --region $REGION \
-          --platform managed \
-          --allow-unauthenticated
+      - name: Submit build to Cloud Build
+        run: |
+          gcloud builds submit --config cloudbuild.yaml .
