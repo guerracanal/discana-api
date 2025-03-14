@@ -1,0 +1,11 @@
+Flask
+Flask-PyMongo
+flask_cors
+pymongo
+certifi
+cryptography
+idna
+Jinja2
+MarkupSafe
+requests
+urllib3

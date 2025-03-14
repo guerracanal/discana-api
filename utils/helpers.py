@@ -1,0 +1,233 @@
+from datetime import datetime
+from app import mongo
+import logging
+from flask import jsonify, request
+from functools import wraps
+
+
+def convert_id(album):
+    album['_id'] = str(album['_id'])
+    return album
+
+def parse_date(date_str):
+    for fmt in ('%d/%m/%Y', '%Y', '%m/%Y'):
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+    return None
+
+# Paginación
+def paginate_results(query, page, limit):
+    start = (page - 1) * limit
+    end = start + limit
+    return query[start:end]
+
+# Función para manejar la paginación
+def paginate_query(query):
+    try:
+        # Obtener los parámetros de paginación de la consulta
+        limit = int(request.args.get('limit', 10))  # Número de elementos por página (por defecto 10)
+        page = int(request.args.get('page', 1))  # Número de página (por defecto 1)
+        
+        # Calcular el número de documentos a omitir (skip)
+        skip = (page - 1) * limit
+        
+        # Aplicar el límite y el skip a la consulta
+        return query.skip(skip).limit(limit)
+    except ValueError:
+        return query  # Si los parámetros no son válidos, devolver la consulta sin modificaciones
+
+def extract_year(date_release):
+    """Extrae el año de una fecha en diferentes formatos y lo devuelve como entero."""
+    if isinstance(date_release, int):  
+        return date_release  # Ya es un número, lo devolvemos directamente.
+    
+    if isinstance(date_release, str):  
+        parts = date_release.split("/")
+        try:
+            return int(parts[-1])  # Siempre tomamos el último valor y convertimos a int.
+        except ValueError:
+            return None  # Si la conversión falla, devolvemos None.
+
+    return None  # Si el formato no es válido, devolvemos None.
+
+
+def build_format_filter(filter: str) -> dict:
+    """Construye el query de formato para MongoDB según el filtro"""
+    if filter == "disc":
+        return {"format": {"$elemMatch": {"$regex": r"^(CD|vinilo)$", "$options": "i"}}}
+    if filter == "spotify":
+        return {"format": {"$not": {"$elemMatch": {"$regex": r"^(CD|vinilo)$", "$options": "i"}}}}
+    return {}
+
+def execute_paginated_query(base_query: dict, 
+                          page: int, 
+                          per_page: int, 
+                          rnd: bool = False,
+                          min: int = None, 
+                          max: int = None) -> tuple:
+    """Ejecuta una query paginada con opción de orden aleatorio y filtro de duración"""
+    try:
+        # 1. Construir query de duración si es necesario
+        duration_query = {}
+        if min is not None:
+            duration_query["$gte"] = min
+        if max is not None:
+            duration_query["$lte"] = max
+        
+        # Combinar con la query base
+        if duration_query:
+            final_query = {**base_query, "duration": duration_query}
+        else:
+            final_query = base_query.copy()
+
+        # 2. Obtener total de documentos (sin paginación)
+        total = mongo.db.albums.count_documents(final_query)
+        
+        # 3. Construir pipeline
+        pipeline = [{"$match": final_query}]
+        
+        # 4. Orden aleatorio o por defecto
+        if rnd:
+            pipeline.extend([
+                {"$addFields": {"_sort_field": {"$rand": {}}}},
+                {"$sort": {"_sort_field": 1}},
+                {"$project": {"_sort_field": 0}}
+            ])
+        else:
+            pipeline.append({"$sort": {"_id": 1}})
+        
+        # 5. Paginación (siempre al final)
+        pipeline.extend([
+            {"$skip": (page - 1) * per_page},
+            {"$limit": per_page}
+        ])
+        
+        # 6. Ejecutar pipeline
+        albums = list(mongo.db.albums.aggregate(pipeline))
+        
+        # 7. Convertir ObjectIds
+        for album in albums:
+            album["_id"] = str(album["_id"])
+        
+        return albums, total
+        
+    except Exception as e:
+        logging.error(f"Error en execute_paginated_query: {str(e)}")
+        raise
+
+
+def handle_response(service_func):
+    @wraps(service_func)
+    def wrapper(*args, **kwargs):
+        try:
+            # Parámetros comunes
+            page = int(request.args.get('page', 1))
+            limit = int(request.args.get('limit', 10))
+            filter = request.args.get('filter', 'all')
+            rnd = request.args.get('random', 'false').lower() == 'true'
+            all = request.args.get('all', 'false').lower() == 'true'
+            min_value = request.args.get('min', None)  # Esto te devuelve None si no encuentra el parámetro
+            max_value = request.args.get('max', None)  # Lo mismo para 'max'
+
+            # Aquí controlas que solo intentes convertir a entero si el valor no es None
+            min = int(min_value) if min_value is not None else None
+            max = int(max_value) if max_value is not None else None
+
+            # Llamar al servicio
+            albums, total = service_func(*args, **kwargs, 
+                                       page=page, 
+                                       per_page=limit,
+                                       filter=filter,
+                                       rnd=rnd,
+                                       all=all,
+                                       min=min,
+                                       max=max)
+            
+            # Convertir IDs y paginar
+            converted = [convert_id(album) for album in albums]
+            
+            return jsonify({
+                "data": converted,
+                "pagination": {
+                    "total": total,
+                    "page": page,
+                    "per_page": limit,
+                    "total_pages": (total + limit - 1) // limit
+                }
+            })
+            
+        except Exception as e:
+            logging.error(f"Error en {service_func.__name__}: {str(e)}")
+            return jsonify({"error": str(e)}), 500
+            
+    return wrapper
+
+def pipeline_to_query(pipeline: list) -> dict:
+    """Convierte un pipeline de agregación simple a query de MongoDB"""
+    query = {}
+    for stage in pipeline:
+        if "$match" in stage:
+            query = {**query, **stage["$match"]}
+    logging.info(f"Pipeline to query: {query}")
+    return query
+
+
+
+def get_albums_by_any_genres(genres):
+    logging.info(f"Any Genres: {genres}")
+    return{
+        "$or": [
+            {"genre": {"$in": genres}},
+            {"subgenres": {"$in": genres}}
+        ]
+    }
+
+def get_albums_by_all_genres(genres):
+    logging.info(f"All Genres: {genres}")
+    return {
+        "$and": [
+            {
+                "$or": [
+                    {"genre": {"$regex": f"^{genre}$", "$options": "i"}},
+                    {"subgenres": {"$regex": f"^{genre}$", "$options": "i"}}
+                ]
+            } for genre in genres
+        ]
+    }
+def get_albums_by_any_moods(moods):
+    return {
+        "$or": [
+            {"mood": {"$in": moods}},
+        ]
+    }
+   
+def get_albums_by_all_moods(moods):
+   return {
+        "$and": [
+            {
+                "$or": [
+                    {"mood": {"$regex": f"^{mood}$", "$options": "i"}},
+                ]
+            } for mood in moods
+        ]
+    }
+
+def get_albums_by_any_compilations(compilations):
+    return{
+        "$or": [
+            {"compilations": {"$in": compilations}},
+        ]
+    }
+
+def get_albums_by_all_compilations(compilations):
+    return {
+        "$and": [
+            {
+                "$or": [
+                    {"compilations": {"$regex": f"^{compilation}$", "$options": "i"}},
+                ]
+            } for compilation in compilations
+        ]
+    }

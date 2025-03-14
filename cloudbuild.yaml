@@ -1,0 +1,43 @@
+# cloudbuild.yaml
+# Este archivo define el proceso de construcción para Google Cloud Build
+
+steps:
+  # Paso 1: Construir la imagen Docker
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/flask-api:$SHORT_SHA'
+      - '.'  # Este punto representa el directorio actual donde se encuentra el Dockerfile
+
+  # Paso 2: Subir la imagen a Google Container Registry (GCR)
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/flask-api:$SHORT_SHA'
+
+images:
+  - 'gcr.io/$PROJECT_ID/flask-api:$SHORT_SHA'
+
+# Este paso finaliza la construcción y asegura que la imagen esté subida a GCR
+
+# -------------------------------------------
+# Desplegar cambios en Cloud Run
+# Una vez que el archivo cloudbuild.yaml esté configurado y Cloud Build lo haya ejecutado, puedes
+# desplegar la imagen a Cloud Run. Este paso lo puedes hacer en cualquier momento desde tu terminal.
+# Usarías este comando para desplegar en Cloud Run.
+
+# Para desplegar la aplicación en Cloud Run:
+# gcloud run deploy discana-api \
+#   --image gcr.io/$PROJECT_ID/flask-api:$SHORT_SHA \
+#   --platform managed \
+#   --region europe-west1 \
+#   --allow-unauthenticated
+
+# -------------------------------------------
+# Cómo hacer cambios y desplegar de nuevo:
+# 1. Realiza los cambios en tu código.
+# 2. Ejecuta el siguiente comando para volver a construir la imagen y desplegarla:
+#    gcloud builds submit --config cloudbuild.yaml .
+
+# El servicio será automáticamente desplegado en Cloud Run usando la nueva imagen.

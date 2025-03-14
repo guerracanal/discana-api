@@ -1,0 +1,94 @@
+### Parámetros para local
+#@baseUrl = http://localhost:8080/api
+#@authHeader = Bearer YOUR_LOCAL_API_KEY
+
+### Parámetros para producción
+@baseUrl = https://discana-api-346921755711.europe-west1.run.app/api
+@authHeader = Bearer YOUR_PROD_API_KEY
+
+### Obtener todos los álbumes 
+GET {{baseUrl}}/albums?max=30 HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por artista 
+GET {{baseUrl}}/albums/artist/gorillaz?random=true HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+
+### Obtener álbum por titulo 
+GET {{baseUrl}}/albums/title/blue HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+
+### Obtener todos los álbumes 
+GET {{baseUrl}}/albums?limit=2&page=3&random HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por artista 
+GET {{baseUrl}}/albums/artist/chili?limit=2&page=3 HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por formato 
+GET {{baseUrl}}/albums/format/vinilo HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por genero 
+GET {{baseUrl}}/albums/genres/J-Pop/J-Rock/J-Metal/Yakousei/shimokita-kei HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por mood 
+GET {{baseUrl}}/albums/moods/Relajado/Elegante?all=true HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por compilations 
+GET {{baseUrl}}/albums/compilations/ROCK-ES HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por pais 
+GET {{baseUrl}}/albums/country/jp?random=true HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por year 
+GET {{baseUrl}}/albums/year/2023?limit=5&page=1 HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por years
+GET {{baseUrl}}/albums/years/1950/1960?limit=200&page=1 HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+### Obtener álbum por decade 
+GET {{baseUrl}}/albums/decade/1990?limit=500&page=1 HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+###
+GET {{baseUrl}}/albums/anniversary/3 HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+###
+GET {{baseUrl}}/albums/releases/366 HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+###
+GET {{baseUrl}}/albums/type/Planta HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
+
+###
+GET {{baseUrl}}/racks HTTP/1.1
+Authorization: {{authHeader}}
+Accept: application/json
