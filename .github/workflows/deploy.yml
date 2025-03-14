@@ -3,7 +3,7 @@ name: Deploy API to GCP
 on:
   push:
     branches:
-      - main  # Ajusta a la rama que uses para producción
+      - main  # Ajusta según la rama de producción
 
 jobs:
   deploy:
@@ -26,7 +26,7 @@ jobs:
           version: 'latest'
           project_id: discana
 
-      # 4. Verificar que se ha activado la cuenta (opcional, para depuración)
+      # 4. Verificar la cuenta autenticada (opcional)
       - name: Verify authenticated account
         run: gcloud auth list
 
@@ -34,7 +34,9 @@ jobs:
       - name: Set environment variable for Mongo URI
         run: echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
 
-      # 6. Enviar el build a Cloud Build usando cloudbuild.yaml
+      # 6. Obtener el hash corto del commit actual y enviar el build a Cloud Build
       - name: Submit build to Cloud Build
         run: |
-          gcloud builds submit --config cloudbuild.yaml .
+          SHORT_SHA=$(git rev-parse --short HEAD || echo "latest")
+          echo "Using SHORT_SHA: $SHORT_SHA"
+          gcloud builds submit --config cloudbuild.yaml --substitutions=SHORT_SHA=$SHORT_SHA .
