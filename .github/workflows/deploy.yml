@@ -3,20 +3,20 @@ name: Deploy API to GCP
 on:
   push:
     branches:
-      - main  # Cambia esto a la rama principal de tu proyecto, si es necesario
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
     
-    # Verificar la estructura del directorio
-    - name: Verify the directory structure
-      run: ls -la
-
     # Checkout del código desde el repositorio
     - name: Checkout code
       uses: actions/checkout@v2
+
+    # Verificar la estructura del directorio después del checkout
+    - name: Verify the directory structure
+      run: ls -la
 
     # Configuración del SDK de Google Cloud
     - name: Set up Cloud SDK
@@ -26,7 +26,7 @@ jobs:
 
     # Autenticación con GCP usando las credenciales
     - name: Authenticate to GCP
-      uses: google-github-actions/auth@v1  # Usar la versión más reciente
+      uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
@@ -41,7 +41,7 @@ jobs:
         REGION=europe-west1
         API_IMAGE_NAME=discana-api
         API_CONTAINER_NAME=gcr.io/$PROJECT_NAME/$API_IMAGE_NAME
-        API_DOCKER_CONTEXT=discana-api  # Aquí se asume que tu código está en la carpeta discana-api
+        API_DOCKER_CONTEXT=discana-api  # Asegúrate de que la ruta sea correcta
 
         # Construir y etiquetar la imagen Docker en Google Container Registry
         gcloud builds submit --tag $API_CONTAINER_NAME $API_DOCKER_CONTEXT
