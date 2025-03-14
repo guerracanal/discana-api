@@ -1,6 +1,6 @@
 # cloudbuild.yaml
 steps:
-  # Paso 1: Construir la imagen Docker
+  # Paso 1: Construir la imagen Docker usando el Dockerfile en el directorio raíz
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -8,7 +8,7 @@ steps:
       - 'gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA'
       - '.'
 
-  # Paso 2: Subir la imagen a Google Container Registry
+  # Paso 2: Subir la imagen a Google Container Registry (GCR)
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'

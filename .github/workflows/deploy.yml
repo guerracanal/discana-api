@@ -3,15 +3,17 @@ name: Deploy API to GCP
 on:
   push:
     branches:
-      - main  # Ajusta a la rama que uses para producción
+      - main  # Ajusta a la rama de producción si es necesario
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1. Checkout del código
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # 2. Configurar el SDK de Google Cloud y autenticarse con el service account
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
@@ -19,9 +21,15 @@ jobs:
           project_id: discana
           service_account_key: ${{ secrets.GCP_CREDENTIALS }}
 
+      # 3. Verificar que se ha activado la cuenta de servicio
+      - name: Verify authenticated account
+        run: gcloud auth list
+
+      # 4. Establecer la variable de entorno para Mongo URI
       - name: Set environment variable for Mongo URI
         run: echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
 
+      # 5. Enviar el build a Cloud Build usando cloudbuild.yaml
       - name: Submit build to Cloud Build
         run: |
           gcloud builds submit --config cloudbuild.yaml .
