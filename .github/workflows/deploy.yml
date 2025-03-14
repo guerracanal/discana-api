@@ -9,6 +9,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+
+    - name: Verify the directory structure
+      run: ls -la
+
     - name: Checkout code
       uses: actions/checkout@v2
 
@@ -18,7 +22,7 @@ jobs:
         version: 'latest'
 
     - name: Authenticate to GCP
-      uses: google-github-actions/auth@v0
+      uses: google-github-actions/auth@v1  # Asegúrate de usar la versión más reciente
       with:
         credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
@@ -31,8 +35,8 @@ jobs:
         REGION=europe-west1
         API_IMAGE_NAME=discana-api
         API_CONTAINER_NAME=gcr.io/$PROJECT_NAME/$API_IMAGE_NAME
-        API_DOCKER_CONTEXT=discana-api
-        
+        API_DOCKER_CONTEXT=./discana-api  
+
         gcloud builds submit --tag $API_CONTAINER_NAME $API_DOCKER_CONTEXT
 
     - name: Deploy to Cloud Run
