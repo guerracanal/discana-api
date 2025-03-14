@@ -8,7 +8,7 @@ steps:
       - 'gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA'
       - '.'
 
-  # Paso 2: Subir la imagen a Google Container Registry (GCR)
+  # Paso 2: Subir la imagen a Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
