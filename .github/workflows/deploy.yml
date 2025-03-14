@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    
+
     # Checkout del código desde el repositorio
     - name: Checkout code
       uses: actions/checkout@v2
@@ -41,7 +41,7 @@ jobs:
         REGION=europe-west1
         API_IMAGE_NAME=discana-api
         API_CONTAINER_NAME=gcr.io/$PROJECT_NAME/$API_IMAGE_NAME
-        API_DOCKER_CONTEXT=discana-api  # Asegúrate de que la ruta sea correcta
+        API_DOCKER_CONTEXT=.  # (.) ya que el Dockerfile está en el directorio raíz
 
         # Construir y etiquetar la imagen Docker en Google Container Registry
         gcloud builds submit --tag $API_CONTAINER_NAME $API_DOCKER_CONTEXT
