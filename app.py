@@ -20,17 +20,10 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Registrar Blueprints
 from albums.routes import albums_blueprint
-from albums_pendientes.routes import albums_ptes_blueprint
 from racks.routes import racks_blueprint
-from racks_pendientes.routes import racks_ptes_blueprint
-from racks_types.routes import racks_types_blueprint
 
-app.register_blueprint(albums_blueprint, url_prefix='/api/albums')
-app.register_blueprint(albums_ptes_blueprint, url_prefix='/api/albums_ptes')
-app.register_blueprint(racks_blueprint, url_prefix='/api/racks')
-app.register_blueprint(racks_ptes_blueprint, url_prefix='/api/racks_ptes')
-app.register_blueprint(racks_types_blueprint, url_prefix='/api/racks_types')
-
+app.register_blueprint(albums_blueprint, url_prefix='/api/v2/a')
+app.register_blueprint(racks_blueprint, url_prefix='/api/v2/r')
 
 # Opcional: Mostrar logs en consola con formato
 formatter = logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")

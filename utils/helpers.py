@@ -66,7 +66,8 @@ def execute_paginated_query(base_query: dict,
                           per_page: int, 
                           rnd: bool = False,
                           min: int = None, 
-                          max: int = None) -> tuple:
+                          max: int = None,
+                          collection_name: str = 'albums') -> tuple:
     """Ejecuta una query paginada con opción de orden aleatorio y filtro de duración"""
     try:
         # 1. Construir query de duración si es necesario
@@ -83,7 +84,7 @@ def execute_paginated_query(base_query: dict,
             final_query = base_query.copy()
 
         # 2. Obtener total de documentos (sin paginación)
-        total = mongo.db.albums.count_documents(final_query)
+        total = mongo.db[collection_name].count_documents(final_query)
         
         # 3. Construir pipeline
         pipeline = [{"$match": final_query}]
@@ -105,7 +106,7 @@ def execute_paginated_query(base_query: dict,
         ])
         
         # 6. Ejecutar pipeline
-        albums = list(mongo.db.albums.aggregate(pipeline))
+        albums = list(mongo.db[collection_name].aggregate(pipeline))
         
         # 7. Convertir ObjectIds
         for album in albums:

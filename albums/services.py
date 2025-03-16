@@ -1,9 +1,10 @@
 from utils.helpers import build_format_filter, execute_paginated_query, extract_year, get_albums_by_all_compilations, get_albums_by_all_genres, get_albums_by_all_moods, get_albums_by_any_compilations, get_albums_by_any_genres, get_albums_by_any_moods, pipeline_to_query
 from app import mongo
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import re
+import pytz
 
 # Función base modificada para todos los servicios
 def base_album_service(
@@ -14,12 +15,13 @@ def base_album_service(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    **kwargs  # Aceptar parámetros adicionales
+    collection_name: str = "albums",  
+    **kwargs  
 ) -> tuple:
     """Base para todos los servicios de álbumes"""
     format_filter = build_format_filter(filter)
     final_query = {**base_query, **format_filter}
-    return execute_paginated_query(final_query, page, per_page, rnd, min, max)
+    return execute_paginated_query(final_query, page, per_page, rnd, min, max, collection_name)
 
 
 # Obtener todos los álbumes
@@ -30,10 +32,11 @@ def get_all_albums(
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     query = {}
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 
 # Ejemplo de implementación para get_albums_by_artist
@@ -45,10 +48,11 @@ def get_albums_by_artist(
     per_page: int = 10,
     rnd: bool = True,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     query = {"artist": {"$regex": f".*{artist}.*", "$options": "i"}}
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_albums_by_title(
     title: str,
@@ -58,10 +62,11 @@ def get_albums_by_title(
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     query = {"title": {"$regex": f".*{title}.*", "$options": "i"}}
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_albums_by_country(
     country: str,
@@ -71,10 +76,11 @@ def get_albums_by_country(
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     query = {"country": {"$regex": f".*{country}.*", "$options": "i"}}
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_albums_by_genres(
     genres: str,
@@ -84,7 +90,8 @@ def get_albums_by_genres(
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     genres_list = genres.split("/")
 
@@ -93,7 +100,7 @@ def get_albums_by_genres(
     else:
         query = get_albums_by_any_genres(genres_list)
     
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_albums_by_moods(
     moods: str,
@@ -103,7 +110,8 @@ def get_albums_by_moods(
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     moods_list = moods.split("/")
 
@@ -112,7 +120,7 @@ def get_albums_by_moods(
     else:
         query = get_albums_by_any_moods(moods_list)
     
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 
 def get_albums_by_compilations(
@@ -123,7 +131,8 @@ def get_albums_by_compilations(
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     compilations_list = compilations.split("/")
 
@@ -132,7 +141,7 @@ def get_albums_by_compilations(
     else:
         query = get_albums_by_any_compilations(compilations_list)
     
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_albums_by_format(
     format: str,
@@ -142,10 +151,11 @@ def get_albums_by_format(
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     query = {"format": {"$regex": f".*{format}.*", "$options": "i"}}
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 # Obtener discos por año de lanzamiento
 def get_albums_by_year(
@@ -156,10 +166,11 @@ def get_albums_by_year(
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
-    max: int = None
+    max: int = None,
+    collection_name: str = "albums"  
 ) -> tuple:
     query = {"date_release": {"$regex": f".*{year}.*"}}
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 
 
@@ -173,6 +184,7 @@ def get_albums_by_year_range(
     rnd: bool = False,
     min: int = None,
     max: int = None,
+    collection_name: str = "albums",  
     **kwargs  # Absorbe parámetros adicionales
 ) -> tuple:
     query = {
@@ -186,7 +198,7 @@ def get_albums_by_year_range(
             }}
         ]
     }
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 # Aplicar misma lógica para get_albums_by_decade
 
@@ -199,6 +211,7 @@ def get_albums_by_decade(
     rnd: bool = False,
     min: int = None,
     max: int = None,
+    collection_name: str = "albums",  
     **kwargs
 ) -> tuple:
     start_year = decade
@@ -214,108 +227,96 @@ def get_albums_by_decade(
             }}
         ]
     }
-    return base_album_service(query, filter, page, per_page, rnd, min, max)
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_new_releases(
     days: int,
-    all: bool = False,
     filter: str = "all",
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
-    **kwargs  # Aceptar parámetros adicionales
+    collection_name: str = "albums",  
+    **kwargs  
 ) -> tuple:
     """
     Devuelve álbumes lanzados en los últimos 'days' días con paginación y filtros.
+    - Filtra por date_release en formato dd/mm/yyyy.
+    - No incluye fechas futuras.
     """
+    # 1. Calcular fecha límite (NOW - days)
+    utc = pytz.UTC
+    cutoff_date = datetime.now(utc) - timedelta(days=int(days))
+    
+    # 2. Pipeline principal (optimizado)
     pipeline = [
-        # Convertir date_release a string y validar formato
-        {
-            "$addFields": {
-                "date_str": {"$toString": "$date_release"}
-            }
-        },
+        # Filtro inicial: regex para validar formato dd/mm/yyyy
         {
             "$match": {
-                "$expr": {
-                    "$regexMatch": {
-                        "input": "$date_str",
-                        "regex": r"^\d{2}/\d{2}/\d{4}$"
-                    }
-                }
+                "date_release": {"$regex": r"^\d{2}/\d{2}/\d{4}$"}
             }
         },
-        
-        # Convertir a fecha
+        # Convertir a fecha y filtrar nulos (evitar fechas inválidas)
         {
             "$addFields": {
                 "release_date": {
                     "$dateFromString": {
-                        "dateString": "$date_str",
+                        "dateString": "$date_release",
                         "format": "%d/%m/%Y"
                     }
                 }
             }
         },
-        
-        # Calcular días desde lanzamiento
-        {
-            "$addFields": {
-                "diff_days": {
-                    "$dateDiff": {
-                        "startDate": "$release_date",
-                        "endDate": "$$NOW",
-                        "unit": "day"
-                    }
-                }
-            }
-        },
-        
-        # Filtrar por rango y fechas pasadas
         {
             "$match": {
-                "$expr": {
-                    "$and": [
-                        {"$lte": ["$diff_days", days]},
-                        {"$lte": ["$release_date", "$$NOW"]}
-                    ]
+                "release_date": {"$ne": None}
+            }
+        },
+        # Filtrar por rango: [cutoff_date, NOW]
+        {
+            "$match": {
+                "release_date": {
+                    "$gte": cutoff_date,
+                    "$lte": datetime.now(utc)
                 }
             }
         },
-        
-        # Ordenar por más recientes primero
-        {"$sort": {"diff_days": 1}}
+        # Ordenar por fecha descendente
+        {"$sort": {"release_date": -1}}
     ]
     
-    # Aplicar filtro de formato
+    # 3. Añadir filtro adicional (formato físico/digital)
     if filter != "all":
-        pipeline.append({"$match": build_format_filter(filter)})
+        format_filter = build_format_filter(filter)
+        pipeline.append({"$match": format_filter})
     
-    # Paginación u orden aleatorio
-    if rnd:
-        pipeline.append({"$sample": {"size": per_page}})
-    else:
+    # 4. Paginación o muestra aleatoria
+    #if rnd:
+    #    pipeline.append({"$sample": {"size": per_page}})
+    #else:
         pipeline.extend([
             {"$skip": (page - 1) * per_page},
             {"$limit": per_page}
         ])
     
-    # Ejecutar pipeline principal
-    albums = list(mongo.db.albums.aggregate(pipeline))
+    # 5. Ejecutar consulta principal
+    albums = list(mongo.db[collection_name].aggregate(pipeline))
     
-    # Obtener total de resultados (sin paginación)
-    count_pipeline = pipeline.copy()
-    for stage in reversed(count_pipeline):
-        if "$skip" in stage or "$limit" in stage or "$sample" in stage:
-            count_pipeline.remove(stage)
-    
+    # 6. Contar total (pipeline separado para evitar límite BSON)
+    count_pipeline = [
+        {"$match": {"date_release": {"$regex": r"^\d{2}/\d{2}/\d{4}$"}}},
+        {"$addFields": {"release_date": {"$dateFromString": {"dateString": "$date_release", "format": "%d/%m/%Y"}}}},
+        {"$match": {"release_date": {"$ne": None}}},
+        {"$match": {"release_date": {"$gte": cutoff_date, "$lte": datetime.now(utc)}}}
+    ]
+    if filter != "all":
+        count_pipeline.append({"$match": format_filter})
     count_pipeline.append({"$count": "total"})
-    total_result = list(mongo.db.albums.aggregate(count_pipeline))
+    
+    total_result = list(mongo.db[collection_name].aggregate(count_pipeline))
     total = total_result[0]["total"] if total_result else 0
     
-    # Limpiar campos temporales y convertir IDs
+    # 7. Limpiar campos y formatear IDs
     for album in albums:
-        album.pop("date_str", None)
         album.pop("release_date", None)
         album["_id"] = str(album["_id"])
     
@@ -328,7 +329,8 @@ def get_anniversary_albums(
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
-    **kwargs  # Aceptar parámetros adicionales
+    collection_name: str = "albums",  
+    **kwargs  
 ) -> tuple:
     today = datetime.today()
     current_year = today.year
@@ -424,7 +426,7 @@ def get_anniversary_albums(
         ])
     
     # Obtener resultados
-    albums = list(mongo.db.albums.aggregate(pipeline))
+    albums = list(mongo.db[collection_name].aggregate(pipeline))
     
     # Contar total (sin paginación)
     count_pipeline = pipeline.copy()
@@ -433,7 +435,7 @@ def get_anniversary_albums(
             count_pipeline.remove(stage)
     
     count_pipeline.append({"$count": "total"})
-    total = mongo.db.albums.aggregate(count_pipeline).next().get("total", 0)
+    total = mongo.db[collection_name].aggregate(count_pipeline).next().get("total", 0)
     
     # Limpiar y convertir IDs
     for album in albums:
@@ -448,6 +450,7 @@ def get_albums_by_type_service(
     tipo: str,
     page: int = 1,
     per_page: int = 10,
+    collection_name: str = "albums",
     **kwargs
 ) -> tuple:
     """
@@ -580,11 +583,11 @@ def get_albums_by_type_service(
         {"$limit": per_page}
     ]
      # Obtener total
-    total_result = list(mongo.db.albums.aggregate(count_pipeline))
+    total_result = list(mongo.db[collection_name].aggregate(count_pipeline))
     total = total_result[0]["total"] if total_result else 0
     
     # Obtener resultados
-    results = list(mongo.db.albums.aggregate(results_pipeline))
+    results = list(mongo.db[collection_name].aggregate(results_pipeline))
     
     return results, total  # Devolver tupla correcta
 
