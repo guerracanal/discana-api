@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from spotify.services import get_saved_albums_from_spotify
 from utils.helpers import handle_response
 
 from albums.services import (
@@ -25,7 +26,15 @@ albums_blueprint = Blueprint('albums', __name__)
 @albums_blueprint.route('/<collection_name>/', methods=['GET'])
 @handle_response
 def albums(collection_name, **params):
-    return get_all_albums(collection_name=collection_name, **params)
+    if collection_name == 'spotify':
+        user_id = params.get('user_id')
+        if not user_id:
+            raise ValueError("El parámetro 'user_id' es obligatorio cuando 'collection_name' es 'spotify'.")
+        return get_saved_albums_from_spotify(**params)
+    else:
+        return get_all_albums(collection_name=collection_name, **params)
+    
+    return {"formatted_albums": formatted_albums, "total": total}
 
 @albums_blueprint.route('/<collection_name>/artist/<artist>', methods=['GET'])
 @handle_response
