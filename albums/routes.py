@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from utils.helpers import handle_response
-
+from utils.helpers import handle_response, convert_id, paginate_results
+from logging_config import logger
 from albums.services import (
     get_all_albums, 
     get_albums_by_artist,
@@ -17,15 +17,26 @@ from albums.services import (
     get_anniversary_albums,
     get_albums_by_type_service
 )
-from utils.helpers import convert_id, paginate_results
-import logging
+from spotify.services import (
+    get_saved_albums_spotify, 
+    get_new_releases_spotify, 
+    get_recommended_albums_spotify
+)
 
 albums_blueprint = Blueprint('albums', __name__)
 
 @albums_blueprint.route('/<collection_name>/', methods=['GET'])
 @handle_response
 def albums(collection_name, **params):
-    return get_all_albums(collection_name=collection_name, **params)
+    if collection_name == 'spotify':
+        user_id = params.get('user_id')
+        if not user_id:
+            raise ValueError("El parámetro 'user_id' es obligatorio cuando 'collection_name' es 'spotify'.")
+        return get_saved_albums_spotify(**params)
+    else:
+        return get_all_albums(collection_name=collection_name, **params)
+    
+    #return {"formatted_albums": formatted_albums, "total": total}
 
 @albums_blueprint.route('/<collection_name>/artist/<artist>', methods=['GET'])
 @handle_response
@@ -57,8 +68,8 @@ def get_by_format(collection_name, format, **params):
 @albums_blueprint.route('/<collection_name>/genres/<path:genres>', methods=['GET'])
 @handle_response
 def get_by_genres(collection_name, genres, **params):
-    logging.info(f"Entrando en el endpoint de genres: {genres}")
-    logging.info(f"Parámetros: {params}")
+    logger.info(f"Entrando en el endpoint de genres: {genres}")
+    logger.info(f"Parámetros: {params}")
     return get_albums_by_genres(
         collection_name=collection_name,
         genres=genres, 
@@ -68,8 +79,8 @@ def get_by_genres(collection_name, genres, **params):
 @albums_blueprint.route('/<collection_name>/moods/<path:moods>', methods=['GET'])
 @handle_response
 def get_by_moods(collection_name, moods, **params):
-    logging.info(f"Entrando en el endpoint de moods: {moods}")
-    logging.info(f"Parámetros: {params}")
+    logger.info(f"Entrando en el endpoint de moods: {moods}")
+    logger.info(f"Parámetros: {params}")
     return get_albums_by_moods(
         collection_name=collection_name,
         moods=moods, 
@@ -79,8 +90,8 @@ def get_by_moods(collection_name, moods, **params):
 @albums_blueprint.route('/<collection_name>/compilations/<path:compilations>', methods=['GET'])
 @handle_response
 def get_by_compilations(collection_name, compilations, **params):
-    logging.info(f"Entrando en el endpoint de compilations: {compilations}")
-    logging.info(f"Parámetros: {params}")
+    logger.info(f"Entrando en el endpoint de compilations: {compilations}")
+    logger.info(f"Parámetros: {params}")
     return get_albums_by_compilations(
         collection_name=collection_name,
         compilations=compilations, 
@@ -148,5 +159,28 @@ def get_albums_by_type_route(collection_name, tipo, **params):
     return get_albums_by_type_service(
         collection_name=collection_name,
         tipo=tipo,
+        **params
+    )
+
+@albums_blueprint.route('/spotify/me', methods=['GET'])
+@handle_response
+def get_saved_albums_from_spotify(**params):
+    return get_saved_albums_spotify(
+        **params
+    )
+
+@albums_blueprint.route('/spotify/new/<country>', methods=['GET'])
+@handle_response
+def get_new_releases_from_spotify(country, **params):
+    return get_new_releases_spotify(
+        country=country,
+        **params
+    )
+
+@albums_blueprint.route('/spotify/recommended/<type>', methods=['GET'])
+@handle_response
+def get_recommended_albums_from_spotify(type, **params):
+    return get_recommended_albums_spotify(
+        type=type,
         **params
     )
