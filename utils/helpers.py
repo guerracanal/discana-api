@@ -1,6 +1,6 @@
 from datetime import datetime
 from app import mongo
-import logging
+from logging_config import logger
 from flask import jsonify, request
 from functools import wraps
 
@@ -115,7 +115,7 @@ def execute_paginated_query(base_query: dict,
         return albums, total
         
     except Exception as e:
-        logging.error(f"Error en execute_paginated_query: {str(e)}")
+        logger.error(f"Error en execute_paginated_query: {str(e)}")
         raise
 
 
@@ -162,7 +162,7 @@ def handle_response(service_func):
             })
             
         except Exception as e:
-            logging.error(f"Error en {service_func.__name__}: {str(e)}")
+            logger.error(f"Error en {service_func.__name__}: {str(e)}")
             return jsonify({"error": str(e)}), 500
             
     return wrapper
@@ -173,13 +173,13 @@ def pipeline_to_query(pipeline: list) -> dict:
     for stage in pipeline:
         if "$match" in stage:
             query = {**query, **stage["$match"]}
-    logging.info(f"Pipeline to query: {query}")
+    logger.info(f"Pipeline to query: {query}")
     return query
 
 
 
 def get_albums_by_any_genres(genres):
-    logging.info(f"Any Genres: {genres}")
+    logger.info(f"Any Genres: {genres}")
     return{
         "$or": [
             {"genre": {"$in": genres}},
@@ -188,7 +188,7 @@ def get_albums_by_any_genres(genres):
     }
 
 def get_albums_by_all_genres(genres):
-    logging.info(f"All Genres: {genres}")
+    logger.info(f"All Genres: {genres}")
     return {
         "$and": [
             {

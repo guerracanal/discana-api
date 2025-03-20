@@ -3,8 +3,8 @@ from flask import Flask
 from flask_pymongo import PyMongo
 from config import Config
 from flask_cors import CORS
-import logging
 from werkzeug.middleware.proxy_fix import ProxyFix
+from logging_config import logger
 
 # Inicializar Flask
 app = Flask(__name__)
@@ -23,25 +23,8 @@ from albums.routes import albums_blueprint
 from racks.routes import racks_blueprint
 from spotify.routes import spotify_blueprint
 
+logger.info("Inicializando la aplicación Flask y registrando blueprints")
+
 app.register_blueprint(albums_blueprint, url_prefix='/api/v2/a')
 app.register_blueprint(racks_blueprint, url_prefix='/api/v2/r')
 app.register_blueprint(spotify_blueprint, url_prefix='/api/v2/s')
-
-
-# Opcional: Mostrar logs en consola con formato
-formatter = logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")
-
-# Obtener el logger raíz
-logger = logging.getLogger()
-
-# Limpiar los handlers previos (evitar duplicados)
-if logger.hasHandlers():
-    logger.handlers.clear()
-
-# Agregar el nuevo StreamHandler
-handler = logging.StreamHandler()
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
-# Configurar el nivel de log
-logger.setLevel(logging.INFO)

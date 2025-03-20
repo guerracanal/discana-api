@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, redirect, url_for
 import requests
-from spotify.services import get_saved_albums_from_spotify, save_access_token
+from spotify.services import get_saved_albums_spotify, save_access_token
 from config import Config
 from cryptography.fernet import Fernet
 
@@ -18,15 +18,18 @@ except ValueError as e:
 
 @spotify_blueprint.route('/login', methods=['GET'])
 def spotify_login():
-    # Redirigir al usuario a la página de autorización de Spotify
+    scopes = [
+        "user-top-read",
+        "user-library-read",
+        "user-read-recently-played"  # ¡Nuevo scope requerido!
+    ]
     spotify_auth_url = (
         f"https://accounts.spotify.com/authorize"
         f"?client_id={SPOTIFY_CLIENT_ID}"
         f"&response_type=code"
         f"&redirect_uri={SPOTIFY_REDIRECT_URI}"
-        f"&scope=user-library-read"
+        f"&scope={'%20'.join(scopes)}"
     )
-    print(f"Redirecting to: {spotify_auth_url}")  # Agrega esta línea para inspeccionar la URL
     return redirect(spotify_auth_url)
 
 @spotify_blueprint.route('/callback', methods=['GET'])
@@ -86,7 +89,7 @@ def get_saved_albums():
         return jsonify({"error": "User ID is required"}), 400
 
     try:
-        albums = get_saved_albums_from_spotify(user_id)
+        albums = get_saved_albums_spotify(user_id)
         return jsonify(albums), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
