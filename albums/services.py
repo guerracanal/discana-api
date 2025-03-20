@@ -1,6 +1,6 @@
 from utils.helpers import build_format_filter, execute_paginated_query, extract_year, get_albums_by_all_compilations, get_albums_by_all_genres, get_albums_by_all_moods, get_albums_by_any_compilations, get_albums_by_any_genres, get_albums_by_any_moods, pipeline_to_query
 from app import mongo
-import logging
+from logging_config import logger
 from datetime import datetime, timedelta
 import random
 import re
