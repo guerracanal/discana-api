@@ -28,7 +28,7 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'MONGO_URI=${_MONGO_URI}'
+      - 'MONGO_URI=${_MONGO_URI},SPOTIFY_CLIENT_ID=${_SPOTIFY_CLIENT_ID},SPOTIFY_SECRET=${_SPOTIFY_SECRET},SPOTIFY_REDIRECT_URI=${_SPOTIFY_REDIRECT_URI},ENCRYPTION_KEY=${_ENCRYPTION_KEY},FRONTEND_REDIRECT_URI=${_FRONTEND_REDIRECT_URI}'
 
 
 images:

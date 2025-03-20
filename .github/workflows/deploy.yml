@@ -30,14 +30,10 @@ jobs:
       - name: Verify authenticated account
         run: gcloud auth list
 
-      # 5. Establecer la variable de entorno para Mongo URI
-      - name: Set environment variable for Mongo URI
-        run: echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
-
-      # 6. Obtener el hash corto usando la variable predefinida GITHUB_SHA y enviar el build a Cloud Build
+      # 5. Obtener el hash corto usando la variable predefinida GITHUB_SHA y enviar el build a Cloud Build
       - name: Submit build to Cloud Build
         run: |
           SHORT_SHA=${GITHUB_SHA:0:7}
           echo "Using SHORT_SHA: $SHORT_SHA"
           gcloud builds submit --config cloudbuild.yaml \
-          --substitutions=SHORT_SHA=$SHORT_SHA,_MONGO_URI="${{ secrets.MONGO_URI }}" .
+          --substitutions=SHORT_SHA=$SHORT_SHA,_MONGO_URI="${{ secrets.MONGO_URI }}",_SPOTIFY_CLIENT_ID="${{ secrets.SPOTIFY_CLIENT_ID }}",_SPOTIFY_SECRET="${{ secrets.SPOTIFY_SECRET }}",_SPOTIFY_REDIRECT_URI="${{ secrets.SPOTIFY_REDIRECT_URI }}",_ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}",_FRONTEND_REDIRECT_URI="${{ secrets.FRONTEND_REDIRECT_URI }}" .
