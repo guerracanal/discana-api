@@ -131,6 +131,7 @@ def handle_response(service_func):
             all = request.args.get('all', 'false').lower() == 'true'
             min_value = request.args.get('min', None)  # Esto te devuelve None si no encuentra el parámetro
             max_value = request.args.get('max', None)  # Lo mismo para 'max'
+            user_id = request.args.get('user_id', None) # Parámetro opcional para el ID de usuario de Spotify
 
             # Aquí controlas que solo intentes convertir a entero si el valor no es None
             min = int(min_value) if min_value is not None else None
@@ -144,7 +145,8 @@ def handle_response(service_func):
                                        rnd=rnd,
                                        all=all,
                                        min=min,
-                                       max=max)
+                                       max=max,
+                                       user_id=user_id)
             
             # Convertir IDs y paginar
             converted = [convert_id(album) for album in albums]

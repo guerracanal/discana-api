@@ -21,9 +21,12 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 # Registrar Blueprints
 from albums.routes import albums_blueprint
 from racks.routes import racks_blueprint
+from spotify.routes import spotify_blueprint
 
 app.register_blueprint(albums_blueprint, url_prefix='/api/v2/a')
 app.register_blueprint(racks_blueprint, url_prefix='/api/v2/r')
+app.register_blueprint(spotify_blueprint, url_prefix='/api/v2/s')
+
 
 # Opcional: Mostrar logs en consola con formato
 formatter = logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")

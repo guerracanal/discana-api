@@ -33,7 +33,8 @@ def get_all_albums(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs
 ) -> tuple:
     query = {}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
@@ -49,7 +50,8 @@ def get_albums_by_artist(
     rnd: bool = True,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs
 ) -> tuple:
     query = {"artist": {"$regex": f".*{artist}.*", "$options": "i"}}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
@@ -63,7 +65,8 @@ def get_albums_by_title(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs 
 ) -> tuple:
     query = {"title": {"$regex": f".*{title}.*", "$options": "i"}}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
@@ -77,7 +80,8 @@ def get_albums_by_country(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs
 ) -> tuple:
     query = {"country": {"$regex": f".*{country}.*", "$options": "i"}}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
@@ -91,7 +95,8 @@ def get_albums_by_genres(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs
 ) -> tuple:
     genres_list = genres.split("/")
 
@@ -111,7 +116,8 @@ def get_albums_by_moods(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs
 ) -> tuple:
     moods_list = moods.split("/")
 
@@ -132,7 +138,8 @@ def get_albums_by_compilations(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs
 ) -> tuple:
     compilations_list = compilations.split("/")
 
@@ -152,7 +159,8 @@ def get_albums_by_format(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs
 ) -> tuple:
     query = {"format": {"$regex": f".*{format}.*", "$options": "i"}}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
@@ -167,7 +175,8 @@ def get_albums_by_year(
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums"  
+    collection_name: str = "albums",
+    **kwargs
 ) -> tuple:
     query = {"date_release": {"$regex": f".*{year}.*"}}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
