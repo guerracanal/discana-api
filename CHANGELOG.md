@@ -5,26 +5,23 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ## [Versión sin publicar] (En desarrollo)
 ### Added
-- Nuevas características en desarrollo
+- Servicios de Discogs
+- Más servicios de LastFM
 
 ### Changed
-- Cambios en funcionalidades existentes
 
 ### Deprecated
-- Funcionalidades que serán eliminadas en futuras versiones
 
 ### Removed
-- Funcionalidades eliminadas
 
 ### Fixed
-- Corrección de bugs
+- Paginado de spotify
 
 ### Security
-- Cambios relacionados con seguridad
 
 ---
 
-## [1.0.0] - 2023-11-15
+## [1.0.0] - 23/03/2025
 ### Added
 - Endpoints de LastFM
 - Clase de constantes
@@ -33,6 +30,7 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 ### Changed
 - Limpieza de servicios spotify
 - Rutas en constantes y optimizadas
+- Optimización de variables de entorno
 
 ### Fixed
 - Correción y optimizado de logs
