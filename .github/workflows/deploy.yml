@@ -3,37 +3,45 @@ name: Deploy API to GCP
 on:
   push:
     branches:
-      - main  # Ajusta según tu rama de producción
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      SHORT_SHA: ${{ github.sha }}
     steps:
-      # 1. Hacer checkout del código
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # 2. Autenticarse en GCP usando el secreto GCP_CREDENTIALS
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      # 3. Configurar el SDK de Google Cloud
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           version: 'latest'
-          project_id: discana
+          project_id: discana # Replace with your project ID
 
-      # 4. Verificar la cuenta autenticada (opcional, para depuración)
       - name: Verify authenticated account
         run: gcloud auth list
 
-      # 5. Obtener el hash corto usando la variable predefinida GITHUB_SHA y enviar el build a Cloud Build
-      - name: Submit build to Cloud Build
+      - name: Set environment variables
         run: |
-          SHORT_SHA=${GITHUB_SHA:0:7}
-          echo "Using SHORT_SHA: $SHORT_SHA"
-          gcloud builds submit --config cloudbuild.yaml \
-          --substitutions=SHORT_SHA=$SHORT_SHA,_MONGO_URI="${{ secrets.MONGO_URI }}",_SPOTIFY_CLIENT_ID="${{ secrets.SPOTIFY_CLIENT_ID }}",_SPOTIFY_SECRET="${{ secrets.SPOTIFY_SECRET }}",_SPOTIFY_REDIRECT_URI="${{ secrets.SPOTIFY_REDIRECT_URI }}",_ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}",_FRONTEND_REDIRECT_URI="${{ secrets.FRONTEND_REDIRECT_URI }}" .
+          echo "API_VERSION=v1" >> $GITHUB_ENV # Example API version
+          echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
+          echo "ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}" >> $GITHUB_ENV
+          echo "SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "SPOTIFY_SECRET=${{ secrets.SPOTIFY_SECRET }}" >> $GITHUB_ENV
+          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" >> $GITHUB_ENV
+          echo "LASTFM_API_SECRET=${{ secrets.LASTFM_API_SECRET }}" >> $GITHUB_ENV
+          echo "DISCOGS_API_KEY=${{ secrets.DISCOGS_API_KEY }}" >> $GITHUB_ENV
+          echo "DISCOGS_API_SECRET=${{ secrets.DISCOGS_API_SECRET }}" >> $GITHUB_ENV
+          echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> $GITHUB_ENV
+          echo "API_URL=${{ secrets.API_URL }}" >> $GITHUB_ENV
+
+      - name: Submit build to Cloud Build
+        run: gcloud builds submit --config cloudbuild.yaml --substitutions SHORT_SHA=${SHORT_SHA:0:7}
+

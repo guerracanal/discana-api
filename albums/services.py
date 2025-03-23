@@ -1,3 +1,4 @@
+from utils.constants import Parameters
 from utils.helpers import build_format_filter, execute_paginated_query, extract_year, get_albums_by_all_compilations, get_albums_by_all_genres, get_albums_by_all_moods, get_albums_by_any_compilations, get_albums_by_any_genres, get_albums_by_any_moods, pipeline_to_query
 from app import mongo
 from logging_config import logger
@@ -9,13 +10,13 @@ import pytz
 # Función base modificada para todos los servicios
 def base_album_service(
     base_query: dict,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",  
+    collection_name: str = Parameters.ALBUMS,  
     **kwargs  
 ) -> tuple:
     """Base para todos los servicios de álbumes"""
@@ -26,14 +27,14 @@ def base_album_service(
 
 # Obtener todos los álbumes
 def get_all_albums(
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     all: bool = False,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     query = {}
@@ -44,13 +45,13 @@ def get_all_albums(
 def get_albums_by_artist(
     artist: str,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = True,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     query = {"artist": {"$regex": f".*{artist}.*", "$options": "i"}}
@@ -59,13 +60,13 @@ def get_albums_by_artist(
 def get_albums_by_title(
     title: str,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs 
 ) -> tuple:
     query = {"title": {"$regex": f".*{title}.*", "$options": "i"}}
@@ -74,13 +75,13 @@ def get_albums_by_title(
 def get_albums_by_country(
     country: str,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     query = {"country": {"$regex": f".*{country}.*", "$options": "i"}}
@@ -89,13 +90,13 @@ def get_albums_by_country(
 def get_albums_by_genres(
     genres: str,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     genres_list = genres.split("/")
@@ -110,13 +111,13 @@ def get_albums_by_genres(
 def get_albums_by_moods(
     moods: str,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     moods_list = moods.split("/")
@@ -132,13 +133,13 @@ def get_albums_by_moods(
 def get_albums_by_compilations(
     compilations: str,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     compilations_list = compilations.split("/")
@@ -153,13 +154,13 @@ def get_albums_by_compilations(
 def get_albums_by_format(
     format: str,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     query = {"format": {"$regex": f".*{format}.*", "$options": "i"}}
@@ -169,13 +170,13 @@ def get_albums_by_format(
 def get_albums_by_year(
     year: str,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     query = {"date_release": {"$regex": f".*{year}.*"}}
@@ -187,13 +188,13 @@ def get_albums_by_year(
 def get_albums_by_year_range(
     start_year: int,
     end_year: int,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",  
+    collection_name: str = Parameters.ALBUMS,  
     **kwargs  # Absorbe parámetros adicionales
 ) -> tuple:
     query = {
@@ -214,13 +215,13 @@ def get_albums_by_year_range(
 # En services.py
 def get_albums_by_decade(
     decade: int,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
     min: int = None,
     max: int = None,
-    collection_name: str = "albums",  
+    collection_name: str = Parameters.ALBUMS,  
     **kwargs
 ) -> tuple:
     start_year = decade
@@ -240,11 +241,11 @@ def get_albums_by_decade(
 
 def get_new_releases(
     days: int,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
-    collection_name: str = "albums",  
+    collection_name: str = Parameters.ALBUMS,  
     **kwargs  
 ) -> tuple:
     """
@@ -294,7 +295,7 @@ def get_new_releases(
     ]
     
     # 3. Añadir filtro adicional (formato físico/digital)
-    if filter != "all":
+    if filter != Parameters.ALL:
         format_filter = build_format_filter(filter)
         pipeline.append({"$match": format_filter})
     
@@ -317,7 +318,7 @@ def get_new_releases(
         {"$match": {"release_date": {"$ne": None}}},
         {"$match": {"release_date": {"$gte": cutoff_date, "$lte": datetime.now(utc)}}}
     ]
-    if filter != "all":
+    if filter != Parameters.ALL:
         count_pipeline.append({"$match": format_filter})
     count_pipeline.append({"$count": "total"})
     
@@ -334,11 +335,11 @@ def get_new_releases(
 def get_anniversary_albums(
     days: int,
     all: bool = False,
-    filter: str = "all",
+    filter: str = Parameters.ALL,
     page: int = 1,
     per_page: int = 10,
     rnd: bool = False,
-    collection_name: str = "albums",  
+    collection_name: str = Parameters.ALBUMS,  
     **kwargs  
 ) -> tuple:
     today = datetime.today()
@@ -424,7 +425,7 @@ def get_anniversary_albums(
     ]
     
     # Aplicar filtro de formato
-    if filter != "all":
+    if filter != Parameters.ALL:
         pipeline.append({"$match": build_format_filter(filter)})
     
     # Paginación
@@ -456,10 +457,10 @@ def get_anniversary_albums(
     return albums, total
 
 def get_albums_by_type_service(
-    tipo: str,
+    type: str,
     page: int = 1,
     per_page: int = 10,
-    collection_name: str = "albums",
+    collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
     """
@@ -474,7 +475,7 @@ def get_albums_by_type_service(
                 "from": "types",
                 "let": {"combinedGenres": {"$setUnion": [{"$ifNull": ["$genre", []]}, {"$ifNull": ["$subgenres", []]}]}},
                 "pipeline": [
-                    {"$match": {"name": tipo}},
+                    {"$match": {"name": type}},
                     {"$project": {"_id": 0, "genres": 1}}
                 ],
                 "as": "type"
@@ -536,7 +537,7 @@ def get_albums_by_type_service(
                 "from": "types",
                 "let": {"combinedGenres": {"$setUnion": [{"$ifNull": ["$genre", []]}, {"$ifNull": ["$subgenres", []]}]}},
                 "pipeline": [
-                    {"$match": {"name": tipo}},
+                    {"$match": {"name": type}},
                     {"$project": {"_id": 0, "genres": 1}}
                 ],
                 "as": "type"

@@ -12,8 +12,8 @@ from logging_config import logger  # Importar el logger centralizado
 # Configuración y Helpers
 # --------------------------
 
-class Config:
-    ENCRYPTION_KEY = Fernet.generate_key()  # Clave de ejemplo
+#class Config:
+# ENCRYPTION_KEY = Fernet.generate_key()  # Clave de ejemplo
 
 user_tokens = {}
 fernet = Fernet(Config.ENCRYPTION_KEY)
@@ -33,6 +33,36 @@ def get_access_token_for_user(user_id: str) -> str:
         raise ValueError(f"Token no encontrado para el usuario: {user_id}")
     return decrypt_token(encrypted_token)
 
+def get_client_access_token() -> str:
+    """Retrieves an access token using the Spotify Client Credentials flow."""
+    auth_url = "https://accounts.spotify.com/api/token"
+    auth_data = {
+        "grant_type": "client_credentials",
+        "client_id": Config.SPOTIFY_CLIENT_ID,
+        "client_secret": Config.SPOTIFY_SECRET,
+    }
+
+    try:
+        response = requests.post(auth_url, data=auth_data)
+        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        data = response.json()
+        access_token = data.get("access_token")
+        if not access_token:
+            logger.error(f"Error getting access token: {data}")
+            raise ValueError("Spotify API did not return an access token.")
+        return access_token
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP error getting Spotify access token: {e.response.status_code} - {e.response.text}")
+        raise Exception(f"HTTP error getting Spotify access token: {e.response.status_code} - {e.response.text}")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error getting Spotify access token: {e}")
+        raise Exception(f"Error getting Spotify access token: {e}")
+    except (KeyError, ValueError) as e:
+        logger.error(f"Error parsing Spotify access token response: {e}")
+        raise Exception(f"Error parsing Spotify access token response: {e}")
+
+
+
 # --------------------------
 # Helpers Reutilizables
 # --------------------------
@@ -40,16 +70,25 @@ def get_access_token_for_user(user_id: str) -> str:
 def make_spotify_request(endpoint: str, **params) -> dict:
     """Realiza una solicitud GET a la API de Spotify con manejo robusto de errores."""
     try:
-        user_id = params.get('user_id')
-        if not user_id:
-            logger.warning("Se intentó realizar una solicitud sin 'user_id'")
-            raise ValueError("Se requiere user_id")
+        headers = {}
+
+        #TODO endpoints que requieren user_id y endpoints que no
+        if not endpoint.__contains__("playlists"):
+            user_id = params.get('user_id')
+            if not user_id:
+                logger.warning("Se intentó realizar una solicitud sin 'user_id'")
+                raise ValueError("Se requiere user_id")        
+
+            access_token = get_access_token_for_user(user_id)
         
-        access_token = get_access_token_for_user(user_id)
-        logger.debug("Realizando solicitud a la API de Spotify con access_token: \n"+access_token);
-        headers = {"Authorization": f"Bearer {access_token}"}
+            logger.debug("Realizando solicitud a la API de Spotify con access_token: \n"+access_token);
+            headers["Authorization"] = f"Bearer {access_token}"
+        else:
+            access_token = get_client_access_token()
+            headers["Authorization"] = f"Bearer {access_token}"
+        
         if 'country' in params:
-            headers["Accept-Language"] = f"{params['country']},en;q=0.9"  # Prioriza contenido local
+            headers["Accept-Language"] = f"{params['country']},en;q=0.9"
 
          # Parámetros prohibidos por endpoint
         forbidden_params = {
@@ -195,12 +234,9 @@ def is_recent(release_date: str, days=365) -> bool:
         return False
 
 
-def get_recommended_albums_spotify(**params) -> Tuple[List[dict], int]:
-    """Genera recomendaciones personalizadas combinando datos de artistas, tracks y lanzamientos recientes."""
+def get_albums_spotify(**params) -> Tuple[List[dict], int]:
     user_id = params.get("user_id")
     type = params.get("type")
-    # page = params.get("page", 1)
-    # limit = params.get("limit", 20)
 
     params.setdefault('limit', params.get('per_page', 20))
     params['offset'] = (params.get('page', 1) - 1) * params['limit']
@@ -219,9 +255,7 @@ def get_recommended_albums_spotify(**params) -> Tuple[List[dict], int]:
         #logger.debug(f"Tracks principales: {track_ids}")
         
         # Combinar datos para recomendaciones
-        recommendations = []
-
-        
+        recommendations = []      
 
         if type == "recent":
             recommendations.extend(get_recent_albums(**params))
@@ -310,55 +344,6 @@ def _get_user_top_artists(user_id: str, limit: int = 5) -> List[dict]:
         logger.error(f"Error obteniendo artistas principales para el usuario {user_id}: {str(e)}")
         return []
 
-def get_recommended_albums(**params) -> List[dict]:
-    """Obtiene álbumes populares por país"""
-    try:
-        # Validar semillas mínimas
-        if not any([params.get("seed_artists"), params.get("seed_genres"), params.get("seed_tracks")]):
-            raise ValueError("Se requieren al menos 2 semillas de diferentes tipos")
-    
-        params['limit'] = params.get('limit', 20) * 2  # Para evitar duplicados
-        data = make_spotify_request("recommendations", **params)
-        albums = {}
-        for track in data.get('tracks', []):
-            album = track.get('album', {})
-            albums[album.get('id')] = format_album(album)
-        return list(albums.values())[:params.get('limit', 20)]
-    except Exception as e:
-        logger.error(f"Error generando recomendaciones: {str(e)}")
-        return []
-
-def get_popular_albums_spotify(**params) -> List[dict]:
-    """Obtiene álbumes populares por país"""
-    country = params.get('country', 'US')
-    playlist_id = f"37i9dQZEVXbMDoHDwVN2tF"  # Top 50 Global (actualizar según país)
-    data = make_spotify_request(f"playlists/{playlist_id}/tracks", **params)
-    albums = {}
-    for item in data.get('items', []):
-        album = item.get('track', {}).get('album', {})
-        albums[album.get('id')] = format_album(album)
-    return list(albums.values())
-
-def get_albums_by_genre_spotify(**params) -> Tuple[List[dict], int]:
-    """Obtiene álbumes por género"""
-    genre = params.get('genre')
-    if not genre:
-        raise ValueError("Se requiere parámetro 'genre'")
-    search_params = {
-        'q': genre,
-        'type': 'playlist',
-        'limit': params.get('limit', 5)
-    }
-    search_data = make_spotify_request("search", **{**params, **search_params})
-    albums = {}
-    for playlist in search_data.get('playlists', {}).get('items', []):
-        tracks_data = make_spotify_request(f"playlists/{playlist['id']}/tracks", **params)
-        for item in tracks_data.get('items', []):
-            album = item.get('track', {}).get('album', {})
-            albums[album.get('id')] = format_album(album)
-    
-    return list(albums.values()), len(albums)
-
 def get_albums_from_user_playlists(user_id: str, playlist_names: List[str]) -> List[dict]:
     """Obtiene álbumes de playlists específicas del usuario, como Radar de novedades y Descubrimiento semanal."""
     try:
@@ -396,88 +381,7 @@ def get_albums_from_user_playlists(user_id: str, playlist_names: List[str]) -> L
     except Exception as e:
         logger.warning(f"Error obteniendo álbumes de playlists específicas para el usuario {user_id}: {str(e)}")
         return []
-
-def get_albums_from_search_playlists(user_id: str, playlist_names: List[str]) -> List[dict]:
-    """Obtiene álbumes de playlists específicas buscando por nombre usando el endpoint 'search'."""
-    try:
-        albums = []
-        for playlist_name in playlist_names:
-            # Buscar la playlist por nombre
-            search_data = make_spotify_request(
-                endpoint="search",
-                user_id=user_id,
-                q=playlist_name,
-                type="playlist",
-                limit=1  # Limitar a la primera coincidencia
-            )
-            playlists = search_data.get("playlists", {}).get("items", [])
-            if not playlists:
-                logger.warning(f"No se encontró ninguna playlist con el nombre: {playlist_name}")
-                continue
-
-            # Obtener la primera playlist encontrada
-            playlist = playlists[0]
-            logger.debug(f"Playlist encontrada: {playlist.get('name')} (ID: {playlist.get('id')})")
-
-            # Obtener las pistas de la playlist
-            tracks_data = make_spotify_request(
-                endpoint=f"playlists/{playlist['id']}/tracks",
-                user_id=user_id
-            )
-            for item in tracks_data.get("items", []):
-                track = item.get("track", {})
-                album = track.get("album", {})
-                if album.get("id") and album not in albums:
-                    albums.append(format_album(album))
-        
-        return albums
-    except Exception as e:
-        logger.warning(f"Error obteniendo álbumes de playlists buscadas por nombre para el usuario {user_id}: {str(e)}")
-        return []
     
-
-def get_albums_from_category_playlists(user_id: str, category_id: str, playlist_names: List[str]) -> List[dict]:
-    """Obtiene álbumes de playlists específicas dentro de una categoría de Spotify."""
-    try:
-        # Obtener playlists de la categoría especificada
-        category_data = make_spotify_request(
-            endpoint=f"browse/categories/{category_id}",
-            user_id=user_id
-        )
-        playlists = category_data.get("playlists", {}).get("items", [])
-          # Loggear los nombres de todas las playlists
-        for playlist in playlists:
-            logger.debug(f"Playlist encontrada: {playlist.get('name')}")
-        
-        # Filtrar playlists por nombre
-        target_playlists = [
-            playlist for playlist in playlists
-            if playlist.get("name") in playlist_names
-        ]
-
-        # Loggear nombres de playlists encontradas
-        logger.debug(f"Playlists encontradas en categoría {category_id}: {[p.get('name') for p in target_playlists]}")
-
-        albums = []
-        for playlist in target_playlists:
-            # Obtener las pistas de la playlist
-            tracks_data = make_spotify_request(
-                endpoint=f"playlists/{playlist['id']}/tracks",
-                user_id=user_id
-            )
-            
-            # Extraer álbumes únicos
-            for item in tracks_data.get("items", []):
-                track = item.get("track", {})
-                if album := track.get("album"):
-                    if album.get("id") and not any(a["id"] == album["id"] for a in albums):
-                        albums.append(format_album(album))
-        
-        return albums
-
-    except Exception as e:
-        logger.warning(f"Error obteniendo álbumes de categoría {category_id}: {str(e)}")
-        return []
     
 def get_recent_albums(**params) -> List[dict]:
     recent_tracks = make_spotify_request(
@@ -489,40 +393,6 @@ def get_recent_albums(**params) -> List[dict]:
     albums = {track['track']['album']['id']: track['track']['album'] 
               for track in recent_tracks.get('items', [])}.values()
     return [format_album(album) for album in albums]
-
-def get_genre_releases_from_listening_history(user_id: str, genre: str) -> List[dict]:
-    try:
-        # Obtener artistas top del usuario
-        top_artists = make_spotify_request(
-            endpoint="me/top/artists",
-            user_id=user_id,
-            time_range="short_term",
-            limit=20
-        ).get("items", [])
-
-        # Filtrar artistas del género objetivo
-        genre_artists = [
-            artist for artist in top_artists
-            if genre.lower() in [g.lower() for g in artist.get("genres", [])]
-        ]
-
-        # Obtener lanzamientos recientes de esos artistas
-        releases = []
-        for artist in genre_artists:
-            artist_albums = make_spotify_request(
-                endpoint=f"artists/{artist['id']}/albums",
-                user_id=user_id,
-                include_groups="single,album",
-                limit=1
-            ).get("items", [])
-            
-            releases.extend([format_album(album) for album in artist_albums])
-
-        return releases
-
-    except Exception as e:
-        logger.error(f"Error obteniendo historial para {genre}: {str(e)}")
-        return []
 
 GENRE_PLAYLIST_ID_MAP = {
     "pitchfork_new": "7q503YgioHAbo1iOIa67M8",  
@@ -539,13 +409,6 @@ GENRE_PLAYLIST_ID_MAP = {
     "ts_metal":"173gN3GcuhIDaZKJOw0luH",
     "sonemic_selects":"1bZsWs0bwQReyC4MpWnr5S"
 }
-
-#    """Obtiene álbumes guardados del usuario"""
-#    params.setdefault('limit', params.get('per_page', 20))
-#    params['offset'] = (params.get('page', 1) - 1) * params['limit']
-    
-#    data = make_spotify_request("me/albums", **params)
-#    return [format_album(item['album']) for item in data.get('items', [])], data.get('total', 0)
 
 def get_albums_from_paylist(playlist: str, **params) -> List[dict]:
     try:
@@ -573,6 +436,7 @@ def get_albums_from_paylist(playlist: str, **params) -> List[dict]:
             if not track:
                 continue
 
+            #TODO obtener el album entero para la duration
             album = track.get("album")
             if album and album.get("id"):  # and is_recent(album.get("release_date")):
                 album_id = album.get("id")

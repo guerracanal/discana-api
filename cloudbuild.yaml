@@ -1,35 +1,26 @@
-# cloudbuild.yaml
 steps:
-  # Paso 1: Construir la imagen Docker usando el Dockerfile en el directorio raíz
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - 'gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA'
-      - '.'
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-t", "gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA", "."]
 
-  # Paso 2: Subir la imagen a Google Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA'
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA"]
 
-  # Paso 3: Desplegar la imagen a Cloud Run
-  - name: 'gcr.io/cloud-builders/gcloud'
+  - name: "gcr.io/cloud-builders/gcloud"
     args:
-      - 'run'
-      - 'deploy'
-      - 'discana-api'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA'
-      - '--region'
-      - 'europe-west1'
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated'
-      - '--set-env-vars'
-      - 'MONGO_URI=${_MONGO_URI},SPOTIFY_CLIENT_ID=${_SPOTIFY_CLIENT_ID},SPOTIFY_SECRET=${_SPOTIFY_SECRET},SPOTIFY_REDIRECT_URI=${_SPOTIFY_REDIRECT_URI},ENCRYPTION_KEY=${_ENCRYPTION_KEY},FRONTEND_REDIRECT_URI=${_FRONTEND_REDIRECT_URI}'
-
+      [
+        "run",
+        "deploy",
+        "discana-api",
+        "--image",
+        "gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA",
+        "--region",
+        "europe-west1",
+        "--platform",
+        "managed",
+        "--allow-unauthenticated",
+        "--entry-point",
+        "gunicorn -c gunicorn.conf.py app:app",
+      ]
 
 images:
-  - 'gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA'
+  - "gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA"

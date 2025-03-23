@@ -18,13 +18,26 @@ CORS(app)
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
+logger.info("Inicializando la aplicación Flask y registrando blueprints")
+
+VERSION = Config.API_VERSION
+# Definir prefijo común para todas las rutas
+app.config['API_PREFIX'] = '/api/' + VERSION
+
+@app.route(f'/{app.config["API_PREFIX"]}/', methods=['GET'], strict_slashes=False)
+#@app.route(f'/{app.config["API_PREFIX"]}/<path:subpath>', methods=['GET'])
+def ruta():
+    return f"API Version: {VERSION}"
+
 # Registrar Blueprints
 from albums.routes import albums_blueprint
 from racks.routes import racks_blueprint
 from spotify.routes import spotify_blueprint
+from lastfm.routes import lastfm_blueprint
+#from discogs.routes import discogs_blueprint
 
-logger.info("Inicializando la aplicación Flask y registrando blueprints")
-
-app.register_blueprint(albums_blueprint, url_prefix='/api/v2/a')
-app.register_blueprint(racks_blueprint, url_prefix='/api/v2/r')
-app.register_blueprint(spotify_blueprint, url_prefix='/api/v2/s')
+app.register_blueprint(albums_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/a')
+app.register_blueprint(racks_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/r')
+app.register_blueprint(spotify_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/spotify')
+app.register_blueprint(lastfm_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/lastfm')
+#app.register_blueprint(discogs_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/discogs')

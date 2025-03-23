@@ -1,9 +1,26 @@
 # config.py
 import os
+
 class Config:
-    MONGO_URI = os.getenv("MONGO_URI")
-    SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-    SPOTIFY_SECRET = os.getenv("SPOTIFY_SECRET")
-    SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
-    ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
-    FRONTEND_REDIRECT_URI = os.getenv("FRONTEND_REDIRECT_URI")
+    API_VERSION = os.environ.get("API_VERSION")
+    MONGO_URI = os.environ.get("MONGO_URI")
+    ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY")
+    SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
+    SPOTIFY_SECRET = os.environ.get("SPOTIFY_SECRET")
+    LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
+    LASTFM_API_SECRET = os.environ.get("LASTFM_API_SECRET")
+    DISCOGS_API_KEY = os.environ.get("DISCOGS_API_KEY")
+    DISCOGS_API_SECRET = os.environ.get("DISCOGS_API_SECRET")
+    FRONTEND_URL = os.environ.get("FRONTEND_URL")
+    API_URL = os.environ.get("API_URL")
+
+    # Add a method to check for required variables
+    def check_required_vars(self):
+        required_vars = ["MONGO_URI", "ENCRYPTION_KEY", "SPOTIFY_CLIENT_ID", "SPOTIFY_SECRET", "LASTFM_API_KEY", "LASTFM_API_SECRET", "FRONTEND_URL", "API_URL"]
+        missing_vars = [var for var in required_vars if not os.environ.get(var)]
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
+# Example usage in your app:
+config = Config()
+config.check_required_vars() # Check at application startup

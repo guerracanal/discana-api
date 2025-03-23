@@ -117,7 +117,18 @@ def execute_paginated_query(base_query: dict,
     except Exception as e:
         logger.error(f"Error en execute_paginated_query: {str(e)}")
         raise
-
+    
+def log_route_info(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        route = request.path
+        method = request.method
+        params = request.args.to_dict()
+        logger.info(f"Entering endpoint: {route} ({method}), Params: {params}")
+        result = func(*args, **kwargs)
+        logger.info(f"Exiting endpoint: {route} ({method})")
+        return result
+    return wrapper
 
 def handle_response(service_func):
     @wraps(service_func)
@@ -132,6 +143,8 @@ def handle_response(service_func):
             min_value = request.args.get('min', None)  # Esto te devuelve None si no encuentra el parámetro
             max_value = request.args.get('max', None)  # Lo mismo para 'max'
             user_id = request.args.get('user_id', None) # Parámetro opcional para el ID de usuario de Spotify
+            period = request.args.get('period', None)
+            detail = request.args.get('detail', None)
 
             # Aquí controlas que solo intentes convertir a entero si el valor no es None
             min = int(min_value) if min_value is not None else None
@@ -146,7 +159,9 @@ def handle_response(service_func):
                                        all=all,
                                        min=min,
                                        max=max,
-                                       user_id=user_id)
+                                       user_id=user_id,
+                                       period=period, 
+                                       detail = detail)
             
             # Convertir IDs y paginar
             converted = [convert_id(album) for album in albums]

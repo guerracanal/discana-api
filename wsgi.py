@@ -1,4 +1,4 @@
-from app import app  # Asegúrate de que "app" sea la instancia de Flask
+from app import app
 
 if __name__ == "__main__":
-    app.run()  # Esto solo se ejecuta localmente, Gunicorn ignora este bloque
+    app.run()

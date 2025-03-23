@@ -1,14 +1,20 @@
+import os
+from pathlib import Path
 from flask import Blueprint, jsonify, request, redirect, url_for
 import requests
-from spotify.services import get_saved_albums_spotify, save_access_token
+from spotify.services import save_access_token
 from config import Config
 from cryptography.fernet import Fernet
 
-spotify_blueprint = Blueprint('spotify', __name__)
+from utils.constants import Collections, Parameters
+
+spotify_blueprint = Blueprint(Collections.SPOTIFY, __name__)
 
 SPOTIFY_CLIENT_ID = Config.SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET = Config.SPOTIFY_SECRET
-SPOTIFY_REDIRECT_URI = Config.SPOTIFY_REDIRECT_URI
+
+SPOTIFY_API_REDIRECT_URI = os.path.join(Config.API_URL, Config.API_VERSION, Collections.SPOTIFY, Parameters.CALLBACK)
+SPOTIFY_FRONTEND_REDIRECT_URI = os.path.join(Config.FRONTEND_URL, Collections.SPOTIFY)
 
 # Generar una instancia de Fernet con la clave de encriptación
 try:
@@ -16,23 +22,25 @@ try:
 except ValueError as e:
     raise ValueError("Invalid ENCRYPTION_KEY in configuration. Ensure it is a 32-byte, URL-safe, base64-encoded string.") from e
 
-@spotify_blueprint.route('/login', methods=['GET'])
+# Login Spotify
+@spotify_blueprint.route(f'/{Parameters.LOGIN}', methods=['GET'])
 def spotify_login():
     scopes = [
         "user-top-read",
         "user-library-read",
-        "user-read-recently-played"  # ¡Nuevo scope requerido!
+        "user-read-recently-played"
     ]
     spotify_auth_url = (
         f"https://accounts.spotify.com/authorize"
         f"?client_id={SPOTIFY_CLIENT_ID}"
         f"&response_type=code"
-        f"&redirect_uri={SPOTIFY_REDIRECT_URI}"
+        f"&redirect_uri={SPOTIFY_API_REDIRECT_URI}"
         f"&scope={'%20'.join(scopes)}"
     )
     return redirect(spotify_auth_url)
 
-@spotify_blueprint.route('/callback', methods=['GET'])
+# Callback Spotify
+@spotify_blueprint.route(f'/{Parameters.CALLBACK}', methods=['GET'])
 def spotify_callback():
     code = request.args.get('code')
     if not code:
@@ -43,7 +51,7 @@ def spotify_callback():
     payload = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": SPOTIFY_REDIRECT_URI,
+        "redirect_uri": SPOTIFY_API_REDIRECT_URI,
         "client_id": SPOTIFY_CLIENT_ID,
         "client_secret": SPOTIFY_CLIENT_SECRET,
     }
@@ -71,7 +79,7 @@ def spotify_callback():
     save_access_token(user_data['id'], access_token)
     
     # 4. Redirigir al frontend con los datos del usuario y token
-    frontend_url = Config.FRONTEND_REDIRECT_URI  # Asegúrate de definir esta URL en tu configuración
+    frontend_url = SPOTIFY_FRONTEND_REDIRECT_URI
     redirect_url = (
         f"{frontend_url}"
         f"?spotify_id={user_data['id']}"
@@ -81,15 +89,3 @@ def spotify_callback():
         f"&expires_in={token_response.json().get('expires_in')}"
     )
     return redirect(redirect_url)
-
-@spotify_blueprint.route('/albums/', methods=['GET'])
-def get_saved_albums():
-    user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-
-    try:
-        albums = get_saved_albums_spotify(user_id)
-        return jsonify(albums), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
