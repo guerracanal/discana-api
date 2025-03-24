@@ -21,11 +21,19 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.1] - 24/03/2025
+
+### Fixed
+- Persistencia de datos de sessión de usuarios de Spotify y LastFM
+
+---
+
+
+
 ## [1.0.0] - 23/03/2025
 ### Added
 - Endpoints de LastFM
 - Clase de constantes
-- 
 
 ### Changed
 - Limpieza de servicios spotify
