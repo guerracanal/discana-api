@@ -23,36 +23,23 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           version: 'latest'
-          project_id: discana # Replace with your project ID
+          project_id: discana
 
       - name: Verify authenticated account
         run: gcloud auth list
 
-      - name: Set environment variables
-        run: |
-          echo "API_VERSION=v1" >> $GITHUB_ENV # Example API version
-          echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
-          echo "ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}" >> $GITHUB_ENV
-          echo "SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "SPOTIFY_SECRET=${{ secrets.SPOTIFY_SECRET }}" >> $GITHUB_ENV
-          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" >> $GITHUB_ENV
-          echo "LASTFM_API_SECRET=${{ secrets.LASTFM_API_SECRET }}" >> $GITHUB_ENV
-          echo "DISCOGS_API_KEY=${{ secrets.DISCOGS_API_KEY }}" >> $GITHUB_ENV
-          echo "DISCOGS_API_SECRET=${{ secrets.DISCOGS_API_SECRET }}" >> $GITHUB_ENV
-          echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> $GITHUB_ENV
-          echo "API_URL=${{ secrets.API_URL }}" >> $GITHUB_ENV
-
       - name: Submit build to Cloud Build
         run: |
           gcloud builds submit --config cloudbuild.yaml \
-              --substitutions SHORT_SHA=${SHORT_SHA:0:7} \
-              --substitutions=_MONGO_URI=${{ secrets.MONGO_URI }} \
-              --substitutions=_ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }} \
-              --substitutions=_SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }} \
-              --substitutions=_SPOTIFY_SECRET=${{ secrets.SPOTIFY_SECRET }} \
-              --substitutions=_LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }} \
-              --substitutions=_LASTFM_API_SECRET=${{ secrets.LASTFM_API_SECRET }} \
-              --substitutions=_DISCOGS_API_KEY=${{ secrets.DISCOGS_API_KEY }} \
-              --substitutions=_DISCOGS_API_SECRET=${{ secrets.DISCOGS_API_SECRET }} \
-              --substitutions=_FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
-              --substitutions=_API_URL=${{ secrets.API_URL }}
+            --substitutions=SHORT_SHA=${SHORT_SHA:0:7},\
+            _API_VERSION=v1,\
+            _MONGO_URI="${{ secrets.MONGO_URI }}",\
+            _ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}",\
+            _SPOTIFY_CLIENT_ID="${{ secrets.SPOTIFY_CLIENT_ID }}",\
+            _SPOTIFY_SECRET="${{ secrets.SPOTIFY_SECRET }}",\
+            _LASTFM_API_KEY="${{ secrets.LASTFM_API_KEY }}",\
+            _LASTFM_API_SECRET="${{ secrets.LASTFM_API_SECRET }}",\
+            _DISCOGS_API_KEY="${{ secrets.DISCOGS_API_KEY }}",\
+            _DISCOGS_API_SECRET="${{ secrets.DISCOGS_API_SECRET }}",\
+            _FRONTEND_URL="${{ secrets.FRONTEND_URL }}",\
+            _API_URL="${{ secrets.API_URL }}"
