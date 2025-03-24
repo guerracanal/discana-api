@@ -6,7 +6,9 @@ import requests
 from typing import List, Tuple
 import requests
 from cryptography.fernet import Fernet
-from logging_config import logger  # Importar el logger centralizado
+from logging_config import logger
+from app import mongo
+from pymongo import errors
 
 # --------------------------
 # Configuración y Helpers
@@ -25,13 +27,35 @@ def decrypt_token(encrypted_token: str) -> str:
     return fernet.decrypt(encrypted_token.encode()).decode()
 
 def save_access_token(user_id: str, access_token: str):
-    user_tokens[user_id] = encrypt_token(access_token)
+    encrypted_token = fernet.encrypt(access_token.encode()).decode()
+    try:
+        mongo.db['spotify_tokens'].update_one(
+            {'user_id': user_id},
+            {'$set': {'access_token': encrypted_token, 'last_updated': datetime.utcnow()}},
+            upsert=True
+        )
+        logger.info(f"Spotify access token saved for user: {user_id}")
+    except errors.PyMongoError as e:
+        logger.error(f"Error saving Spotify access token to MongoDB: {str(e)}", exc_info=True)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error saving Spotify access token: {e}", exc_info=True)
+        raise
+
 
 def get_access_token_for_user(user_id: str) -> str:
-    encrypted_token = user_tokens.get(user_id)
-    if not encrypted_token:
-        raise ValueError(f"Token no encontrado para el usuario: {user_id}")
-    return decrypt_token(encrypted_token)
+    try:
+        token_data = mongo.db['spotify_tokens'].find_one({'user_id': user_id})
+        if token_data:
+            return fernet.decrypt(token_data['access_token'].encode()).decode()
+        else:
+            raise ValueError(f"Token not found for user: {user_id}")
+    except errors.PyMongoError as e:
+        logger.error(f"Error retrieving Spotify access token from MongoDB: {str(e)}", exc_info=True)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error retrieving Spotify access token: {e}", exc_info=True)
+        raise
 
 def get_client_access_token() -> str:
     """Retrieves an access token using the Spotify Client Credentials flow."""
@@ -44,22 +68,14 @@ def get_client_access_token() -> str:
 
     try:
         response = requests.post(auth_url, data=auth_data)
-        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-        data = response.json()
-        access_token = data.get("access_token")
-        if not access_token:
-            logger.error(f"Error getting access token: {data}")
-            raise ValueError("Spotify API did not return an access token.")
-        return access_token
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"HTTP error getting Spotify access token: {e.response.status_code} - {e.response.text}")
-        raise Exception(f"HTTP error getting Spotify access token: {e.response.status_code} - {e.response.text}")
+        response.raise_for_status()
+        return response.json()["access_token"]
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error getting Spotify access token: {e}")
-        raise Exception(f"Error getting Spotify access token: {e}")
-    except (KeyError, ValueError) as e:
-        logger.error(f"Error parsing Spotify access token response: {e}")
-        raise Exception(f"Error parsing Spotify access token response: {e}")
+        logger.error(f"Error getting client access token: {e}", exc_info=True)
+        raise
+    except KeyError:
+        logger.error("Invalid Spotify client credentials response.")
+        raise
 
 
 
@@ -152,9 +168,11 @@ def format_date(date_string: str) -> str:
 
 def format_album(album_data: dict) -> dict:
     """Formatea un álbum en el formato estándar"""
+    artists = album_data.get("artists", [])
+    artist_names = ", ".join([a.get("name", "") for a in artists if a is not None])
     return {
         "_id": album_data.get("id", ""),
-        "artist": ", ".join([a.get("name", "") for a in album_data.get("artists", [])]),
+        "artist": artist_names,
         "title": album_data.get("name", ""),
         "date_release": format_date(album_data.get("release_date", "")),
         "genre": album_data.get("genres", []),

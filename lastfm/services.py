@@ -4,6 +4,8 @@ from typing import List, Tuple
 from config import Config
 from logging_config import logger
 from cryptography.fernet import Fernet
+from app import mongo
+from pymongo import errors
 
 # --------------------------
 # Configuración Last.fm
@@ -23,14 +25,40 @@ def encrypt_token(token: str) -> str:
 def decrypt_token(encrypted_token: str) -> str:
     return fernet.decrypt(encrypted_token.encode()).decode()
 
+
 def save_lastfm_session(session_key: str, username: str):
-    user_tokens[username] = encrypt_token(session_key)
+    encrypted_key = fernet.encrypt(session_key.encode()).decode()
+    try:
+        result = mongo.db['lastfm_sessions'].update_one(
+            {'username': username},
+            {'$set': {'session_key': encrypted_key, 'last_updated': datetime.utcnow()}},
+            upsert=True
+        )
+        if result.matched_count == 0:
+            logger.info(f"Nueva sesión Last.fm guardada para {username}")
+        else:
+            logger.info(f"Sesión Last.fm actualizada para {username}")
+    except errors.PyMongoError as e:
+        logger.error(f"Error al guardar la sesión Last.fm en MongoDB: {str(e)}", exc_info=True)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error saving Last.fm session: {e}", exc_info=True)
+        raise
+
 
 def get_lastfm_session(username: str) -> str:
-    encrypted_token = user_tokens.get(username)
-    if not encrypt_token:
-        raise ValueError(f"Token no encontrado para el usuario: {username}")
-    return decrypt_token(encrypted_token)
+    try:
+        session_data = mongo.db['lastfm_sessions'].find_one({'username': username})
+        if session_data:
+            return fernet.decrypt(session_data['session_key'].encode()).decode()
+        else:
+            raise ValueError(f"Token no encontrado para el usuario: {username}")
+    except errors.PyMongoError as e:
+        logger.error(f"Error al obtener la sesión Last.fm de MongoDB: {str(e)}", exc_info=True)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error getting Last.fm session: {e}", exc_info=True)
+        raise
 
 # --------------------------
 # Helpers Reutilizables
@@ -104,13 +132,15 @@ def get_album_info(artist: str, album: str, mbid: str = None) -> dict:
             params['album'] = album
 
         data = make_lastfm_request('album.getInfo', **params)
+        if 'error' in data:  # Check for Last.fm errors
+            logger.error(f"Last.fm API error: {data['message']}")
+            return {}
         album_info = data.get('album', {})
-        #Check if album_info is a dictionary before returning
-        if isinstance(album_info, dict):
-            return album_info
-        else:
+
+        if not isinstance(album_info, dict):
             logger.warning(f"Unexpected album_info type from Last.fm API: {type(album_info)}. Returning empty dictionary.")
             return {}
+        return album_info
 
     except Exception as e:
         logger.warning(f"Error obteniendo info de {artist} - {album} (mbid: {mbid}): {str(e)}", exc_info=True)
