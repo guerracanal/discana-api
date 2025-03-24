@@ -43,5 +43,16 @@ jobs:
           echo "API_URL=${{ secrets.API_URL }}" >> $GITHUB_ENV
 
       - name: Submit build to Cloud Build
-        run: gcloud builds submit --config cloudbuild.yaml --substitutions SHORT_SHA=${SHORT_SHA:0:7}
-
+        run: |
+          gcloud builds submit --config cloudbuild.yaml \
+              --substitutions SHORT_SHA=${SHORT_SHA:0:7} \
+              --substitutions=_MONGO_URI=${{ secrets.MONGO_URI }} \
+              --substitutions=_ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }} \
+              --substitutions=_SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }} \
+              --substitutions=_SPOTIFY_SECRET=${{ secrets.SPOTIFY_SECRET }} \
+              --substitutions=_LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }} \
+              --substitutions=_LASTFM_API_SECRET=${{ secrets.LASTFM_API_SECRET }} \
+              --substitutions=_DISCOGS_API_KEY=${{ secrets.DISCOGS_API_KEY }} \
+              --substitutions=_DISCOGS_API_SECRET=${{ secrets.DISCOGS_API_SECRET }} \
+              --substitutions=_FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
+              --substitutions=_API_URL=${{ secrets.API_URL }}

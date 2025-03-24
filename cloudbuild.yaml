@@ -7,20 +7,23 @@ steps:
 
   - name: "gcr.io/cloud-builders/gcloud"
     args:
-      [
-        "run",
-        "deploy",
-        "discana-api",
-        "--image",
-        "gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA",
-        "--region",
-        "europe-west1",
-        "--platform",
-        "managed",
-        "--allow-unauthenticated",
-        "--entry-point",
-        "gunicorn -c gunicorn.conf.py app:app",
-      ]
-
-images:
-  - "gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA"
+      - "run"
+      - "deploy"
+      - "discana-api"
+      - "--image=gcr.io/$PROJECT_ID/discana-api:$SHORT_SHA"
+      - "--region=europe-west1"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+      - "--set-env-vars=API_VERSION=${_API_VERSION},MONGO_URI=${_MONGO_URI},ENCRYPTION_KEY=${_ENCRYPTION_KEY},SPOTIFY_CLIENT_ID=${_SPOTIFY_CLIENT_ID},SPOTIFY_SECRET=${_SPOTIFY_SECRET},LASTFM_API_KEY=${_LASTFM_API_KEY},LASTFM_API_SECRET=${_LASTFM_API_SECRET},DISCOGS_API_KEY=${_DISCOGS_API_KEY},DISCOGS_API_SECRET=${_DISCOGS_API_SECRET},FRONTEND_URL=${_FRONTEND_URL},API_URL=${_API_URL}"
+    secretEnv: 
+      - "ENCRYPTION_KEY"
+      - "SPOTIFY_SECRET"
+      - "LASTFM_API_SECRET"
+      - "DISCOGS_API_SECRET"
+      
+options:
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _API_VERSION: v1
+  _FRONTEND_URL: https://discana-racks.web.app/
+  _API_URL: https://discana-api-346921755711.europe-west1.run.app/api/
