@@ -9,10 +9,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      SHORT_SHA: ${{ github.sha }}
+      GCP_PROJECT_ID: discana
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Set SHORT_SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v1
@@ -22,13 +25,13 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
           version: 'latest'
-          project_id: discana
 
       - name: Verify authenticated account
         run: gcloud auth list
         
-      - name: Submit build to Cloud Build
+      - name: Deploy to Cloud Run
         run: |
           gcloud builds submit --config cloudbuild.yaml \
             --substitutions=_SHORT_SHA=${SHORT_SHA:0:7},_API_VERSION='v1',_MONGO_URI='${{ secrets.MONGO_URI }}',_ENCRYPTION_KEY='${{ secrets.ENCRYPTION_KEY }}',_SPOTIFY_CLIENT_ID='${{ secrets.SPOTIFY_CLIENT_ID }}',_SPOTIFY_SECRET='${{ secrets.SPOTIFY_SECRET }}',_LASTFM_API_KEY='${{ secrets.LASTFM_API_KEY }}',_LASTFM_API_SECRET='${{ secrets.LASTFM_API_SECRET }}',_DISCOGS_API_KEY='${{ secrets.DISCOGS_API_KEY }}',_DISCOGS_API_SECRET='${{ secrets.DISCOGS_API_SECRET }}',_FRONTEND_URL='${{ secrets.FRONTEND_URL }}',_API_URL='${{ secrets.API_URL }}'

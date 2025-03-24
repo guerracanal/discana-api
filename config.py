@@ -15,10 +15,14 @@ class Config:
     API_URL = os.environ.get("API_URL")
 
     def check_required_vars(self):
-        required_vars = ["MONGO_URI", "ENCRYPTION_KEY", "SPOTIFY_CLIENT_ID", "SPOTIFY_SECRET", "LASTFM_API_KEY", "LASTFM_API_SECRET", "FRONTEND_URL", "API_URL"]
-        missing_vars = [var for var in required_vars if not getattr(self, var)]  # Corregido: usa los atributos de la instancia
+        required_vars = [
+            "MONGO_URI", "ENCRYPTION_KEY", "SPOTIFY_CLIENT_ID",
+            "SPOTIFY_SECRET", "LASTFM_API_KEY", "LASTFM_API_SECRET",
+            "FRONTEND_URL", "API_URL"
+        ]
+        missing_vars = [var for var in required_vars if not os.environ.get(var)]  # Verifica directamente en os.environ
         if missing_vars:
-            raise ValueError(f"Faltan variables obligatorias: {', '.join(missing_vars)}")
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 config = Config()
 config.check_required_vars()
