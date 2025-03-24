@@ -21,7 +21,7 @@ options:
 
 substitutions:
   _SHORT_SHA: ""
-  _API_VERSION: "v1"  # Valor por defecto
+  _API_VERSION: "v2"  # Valor por defecto
   _FRONTEND_URL: ""    # Debe venir de GitHub Secrets
   _API_URL: ""         # Debe venir de GitHub Secrets
   _MONGO_URI: ""
