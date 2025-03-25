@@ -267,14 +267,26 @@ def get_largest_image(info_album, album_data):
 def get_user_top_albums(**params) -> Tuple[List[dict], int]:
     """Álbumes más escuchados por el usuario"""
     try:
-        params['user'] = params['user_id']
+        user_id = params.get('user_id')
+        if not user_id:
+            raise ValueError("user_id is required")
+        
         # overall | 7day | 1month | 3month | 6month | 12month
-        params['period'] = params.get('period', 'overall')  # Use 'overall' as default if 'period' is not in params
+        period = params.get('period', 'overall')  # Use 'overall' as default if 'period' is not in params
         detail = params.get('detail', True)
         detail = detail.lower() == 'true' if isinstance(detail, str) else bool(detail)
-        params.pop('detail', None)
+        
+        page = params.get('page', 1)
+        limit = params.get('limit', 10)
 
-        data = make_lastfm_request('user.getTopAlbums', **params)
+        request_params = {
+            'user': user_id,
+            'period': period,
+            'page': page,
+            'limit': limit
+        }
+
+        data = make_lastfm_request('user.getTopAlbums', **request_params)
         top_albums = data.get('topalbums', {})
         albums_list = top_albums.get('album', [])
 
@@ -298,10 +310,6 @@ def get_user_top_albums(**params) -> Tuple[List[dict], int]:
 
     except Exception as e:
         logger.error(f"Error en top álbumes: {str(e)}", exc_info=True)
-        raise
-        
-    except Exception as e:
-        logger.error(f"Error en top álbumes: {str(e)}", exc_info=True) # exc_info=True agrega el traceback
         raise
 
 def get_country_top_albums(country: str, page: int = 1, per_page: int = 20) -> Tuple[List[dict], int]:

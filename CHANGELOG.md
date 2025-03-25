@@ -25,10 +25,9 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Persistencia de datos de sessión de usuarios de Spotify y LastFM
+- Fix get_user_top_albums
 
 ---
-
-
 
 ## [1.0.0] - 23/03/2025
 ### Added
