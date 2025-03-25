@@ -25,6 +25,7 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Persistencia de datos de sessión de usuarios de Spotify y LastFM
+- Variables de entorno para el deploy
 - Fix get_user_top_albums
 
 ---
