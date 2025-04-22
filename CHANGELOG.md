@@ -5,7 +5,7 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ## [Versión sin publicar] (En desarrollo)
 ### Added
-- Servicios de Discogs
+- Más Servicios de Discogs
 - Más servicios de LastFM
 
 ### Changed
@@ -20,6 +20,14 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 ### Security
 
 ---
+
+## [1.0.2] - 22/04/2025
+### Added
+- Servicios de Discogs
+- Servicio de Detalle de Albúm
+
+### Fixed
+- Refactorizaciones
 
 ## [1.0.1] - 24/03/2025
 

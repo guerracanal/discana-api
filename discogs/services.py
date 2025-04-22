@@ -4,19 +4,19 @@ from typing import List, Tuple, Optional
 from config import Config
 from logging_config import logger
 from cryptography.fernet import Fernet
+from app import mongo
 
 # --------------------------
 # Configuración Discogs
 # --------------------------
 
 class DiscogsConfig(Config):
-    DISCOGS_API_KEY = 'TU_API_KEY'
-    DISCOGS_API_SECRET = 'TU_API_SECRET'
-    DISCOGS_USER_AGENT = 'TuApp/1.0'
+    DISCOGS_API_KEY = Config.DISCOGS_API_KEY
+    DISCOGS_API_SECRET = Config.DISCOGS_API_SECRET
+    DISCOGS_USER_AGENT = 'Discana/1.0'
     BASE_URL = "https://api.discogs.com/"
-    ENCRYPTION_KEY = Fernet.generate_key()  # Usar una clave fija en producción
 
-fernet = Fernet(DiscogsConfig.ENCRYPTION_KEY)
+fernet = Fernet(Config.ENCRYPTION_KEY)
 user_tokens = {}
 
 # --------------------------
@@ -34,6 +34,19 @@ def get_discogs_token(user_id: str) -> Optional[Tuple[str, str]]:
         return decrypted.split(':')
     return None
 
+def save_discogs_tokens(user_id, encrypted_token):
+    """Guarda los tokens de Discogs en la base de datos."""
+    try:
+        mongo.db.users.update_one(
+            {"discogs_id": user_id},
+            {"$set": {"discogs_token": encrypted_token}},
+            upsert=True
+        )
+        logger.info(f"Discogs tokens saved for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error saving Discogs tokens for user {user_id}: {str(e)}")
+        raise
+
 # --------------------------
 # Helpers Reutilizables
 # --------------------------
@@ -41,6 +54,9 @@ def get_discogs_token(user_id: str) -> Optional[Tuple[str, str]]:
 def make_discogs_request(endpoint: str, user_id: str = None, **params) -> dict:
     """Realiza solicitudes autenticadas a la API de Discogs"""
     try:
+        print(DiscogsConfig.DISCOGS_API_KEY, DiscogsConfig.DISCOGS_API_SECRET)
+        logger.info(f"API Key: {DiscogsConfig.DISCOGS_API_KEY}, API Secret: {DiscogsConfig.DISCOGS_API_SECRET}")
+
         headers = {
             'User-Agent': DiscogsConfig.DISCOGS_USER_AGENT,
             'Authorization': f'Discogs key={DiscogsConfig.DISCOGS_API_KEY}, secret={DiscogsConfig.DISCOGS_API_SECRET}'
@@ -49,6 +65,7 @@ def make_discogs_request(endpoint: str, user_id: str = None, **params) -> dict:
         # Autenticación OAuth si hay usuario
         if user_id:
             tokens = get_discogs_token(user_id)
+            logger.info(f"Tokens recuperados: {tokens}")
             if tokens:
                 headers['Authorization'] = f'OAuth oauth_consumer_key="{DiscogsConfig.DISCOGS_API_KEY}", oauth_token="{tokens[0]}"'
         
@@ -74,34 +91,47 @@ def make_discogs_request(endpoint: str, user_id: str = None, **params) -> dict:
 
 def format_release(release_data: dict) -> dict:
     """Formatea un release de Discogs a formato estándar"""
-    images = release_data.get('images', [])
     return {
         "_id": release_data.get('id'),
         "artist": ", ".join([a.get('name', '') for a in release_data.get('artists', [])]),
         "title": release_data.get('title'),
-        "year": release_data.get('year'),
+        "date_release": release_data.get('year'),
         "genre": release_data.get('genres', []),
-        "styles": release_data.get('styles', []),
-        "image": next((img['uri'] for img in images if img.get('type') == 'primary'), None),
+        "subgenres": release_data.get('styles', []),
+        "image": release_data.get('cover_image'),
+        "thumbnail": release_data.get('thumb'),
         "tracklist": [t['title'] for t in release_data.get('tracklist', [])],
-        "formats": [f['name'] for f in release_data.get('formats', [])],
+        "formats": [f"{f['name']} ({', '.join(f.get('descriptions', []))})" for f in release_data.get('formats', [])],
+        "format": release_data.get('formats', [{}])[0].get('name'),
         "rating": release_data.get('community', {}).get('rating', {}).get('average'),
         "marketplace": {
             "min_price": release_data.get('lowest_price'),
             "have": release_data.get('num_have'),
             "want": release_data.get('num_want')
-        }
+        },
+        "label": [l.get('name', '') for l in release_data.get('labels', [])],
+        "master_id": release_data.get('master_id'),
+        "master_url": release_data.get('master_url'),
+        "resource_url": release_data.get('resource_url'),
+        "discogs_link": release_data.get('resource_url').replace('api.discogs.com/releases/', 'discogs.com/release/'),
     }
 
 # --------------------------
 # Servicios Discogs
 # --------------------------
 
-def get_user_collection(user_id: str, page: int = 1, per_page: int = 20) -> Tuple[List[dict], int]:
+def get_user_collection(**params) -> Tuple[List[dict], int]:
     """Obtiene la colección de discos del usuario"""
     try:
+
+        user_id = params.get('user_id')
+        page = params.get('page', 1)
+        per_page = params.get('limit', 20)
+
         data = make_discogs_request(
             f"users/{user_id}/collection/folders/0/releases",
+            sort="added",
+            sort_order="desc",
             user_id=user_id,
             page=page,
             per_page=per_page
@@ -202,9 +232,12 @@ def get_recommendations(user_id: str, limit: int = 20) -> List[dict]:
         logger.error(f"Error generando recomendaciones: {str(e)}")
         return []
 
-def get_new_releases(page: int = 1, per_page: int = 20) -> Tuple[List[dict], int]:
+def get_new_releases_discogs(**params) -> Tuple[List[dict], int]:
     """Obtiene los últimos lanzamientos añadidos a Discogs"""
     try:
+        page = params.get('page', 1)
+        per_page = params.get('limit', 20)
+        
         data = make_discogs_request(
             "database/search",
             sort="added",

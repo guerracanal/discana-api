@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+
 from lastfm.services import get_user_top_albums
 from utils.constants import Collections, Parameters, ParametersValues, Routes
 from utils.helpers import handle_response, log_route_info
@@ -16,12 +17,18 @@ from albums.services import (
     get_albums_by_decade,
     get_new_releases,
     get_anniversary_albums,
-    get_albums_by_type_service
+    get_albums_by_type_service,
+    get_album_by_id,
+    get_album_by_title_and_artist
 )
 from spotify.services import (
     get_albums_spotify,
     get_saved_albums_spotify, 
     get_new_releases_spotify, 
+)
+from discogs.services import (
+    get_user_collection,
+    get_new_releases_discogs
 )
 
 albums_blueprint = Blueprint(Parameters.ALBUMS, __name__)
@@ -179,6 +186,21 @@ def get_albums_by_type_route(collection_name, type, **params):
         **params
     )
 
+# Get Album Details by ID or Title and Artist
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.DETAIL}/', methods=['GET'])
+@log_route_info
+def get_album_detail(collection_name):
+    album_id = request.args.get('id')
+    title = request.args.get('title')
+    artist = request.args.get('artist')
+    
+    if album_id:
+        return get_album_by_id(collection_name=collection_name, album_id=album_id)
+    elif title and artist:
+        return get_album_by_title_and_artist(collection_name=collection_name, title=title, artist=artist)
+    else:
+        return jsonify({"error": "Provide either 'id' or both 'title' and 'artist'"}), 400
+
 #####################
 # SPOTIFY ENDPOINTS #
 #####################
@@ -224,3 +246,28 @@ def get_user_top_albums_from_lastfm(**params):
     return get_user_top_albums(
         **params
     )
+
+#####################
+# Discogs ENDPOINTS #
+#####################
+
+# Get User Collection from Discogs
+@albums_blueprint.route(f'/{Collections.DISCOGS}/{Parameters.ALBUMS}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_albums_from_discogs(**params):
+    return get_user_collection(
+        **params
+    )
+
+# Get New Releases from Discogs
+@albums_blueprint.route(f'/{Collections.DISCOGS}/{Parameters.NEW}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_new_from_discogs(**params):
+    return get_new_releases_discogs(
+        **params
+    )
+
+
+

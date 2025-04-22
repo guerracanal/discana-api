@@ -34,10 +34,10 @@ from albums.routes import albums_blueprint
 from racks.routes import racks_blueprint
 from spotify.routes import spotify_blueprint
 from lastfm.routes import lastfm_blueprint
-#from discogs.routes import discogs_blueprint
+from discogs.routes import discogs_blueprint
 
 app.register_blueprint(albums_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/a')
 app.register_blueprint(racks_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/r')
 app.register_blueprint(spotify_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/spotify')
 app.register_blueprint(lastfm_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/lastfm')
-#app.register_blueprint(discogs_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/discogs')
+app.register_blueprint(discogs_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/discogs')

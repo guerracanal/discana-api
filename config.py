@@ -13,6 +13,7 @@ class Config:
     DISCOGS_API_SECRET = os.environ.get("DISCOGS_API_SECRET")
     FRONTEND_URL = os.environ.get("FRONTEND_URL")
     API_URL = os.environ.get("API_URL")
+    SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "default_secret_key")  # Cambia "default_secret_key" por algo más seguro
 
     def check_required_vars(self):
         required_vars = [

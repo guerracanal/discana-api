@@ -146,6 +146,7 @@ def handle_response(service_func):
             period = request.args.get('period', None)
             detail = request.args.get('detail', None)
 
+
             # Aquí controlas que solo intentes convertir a entero si el valor no es None
             min = int(min_value) if min_value is not None else None
             max = int(max_value) if max_value is not None else None

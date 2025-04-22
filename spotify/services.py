@@ -88,46 +88,23 @@ def make_spotify_request(endpoint: str, **params) -> dict:
     try:
         headers = {}
 
-        #TODO endpoints que requieren user_id y endpoints que no
-        if not endpoint.__contains__("playlists"):
+        # Verificar si no se requiere user_id
+        if params.get('no_user_neccessary'):
+            access_token = get_client_access_token()
+            headers["Authorization"] = f"Bearer {access_token}"
+        else:
             user_id = params.get('user_id')
             if not user_id:
                 logger.warning("Se intentó realizar una solicitud sin 'user_id'")
-                raise ValueError("Se requiere user_id")        
-
+                raise ValueError("Se requiere user_id")
             access_token = get_access_token_for_user(user_id)
-        
-            logger.debug("Realizando solicitud a la API de Spotify con access_token: \n"+access_token);
-            headers["Authorization"] = f"Bearer {access_token}"
-        else:
-            access_token = get_client_access_token()
             headers["Authorization"] = f"Bearer {access_token}"
         
         if 'country' in params:
             headers["Accept-Language"] = f"{params['country']},en;q=0.9"
 
-         # Parámetros prohibidos por endpoint
-        forbidden_params = {
-                "recommendations": ["user_id", "filter", "rnd", "all"],
-                "browse/new-releases": ["user_id", "per_page", "random"],
-        }
-
-        # Detectar endpoints dinámicos como "artists/{artist_id}/related-artists"
-        if endpoint.startswith("artists/") and endpoint.endswith("/related-artists"):
-            params.pop("user_id", None)
-
-        for key in forbidden_params.get(endpoint, []):
-            params.pop(key, None)
-
-        # Asegurar user_id solo donde es necesario
-        if endpoint in ["me/top/artists", "me/player/recently-played"]:
-            params["user_id"] = params.get("user_id", "")
-
-        if params.get('no_user_neccessary') == True:
-            params.pop('user_id', None)
-
-        for key in ['per_page', 'filter', 'rnd', 'all', 'user_neccessary']:
-            params.pop(key, None)
+        # Eliminar parámetros no necesarios
+        params.pop('no_user_neccessary', None)
 
         url = f"https://api.spotify.com/v1/{endpoint}"
         full_url = requests.Request('GET', url, params=params).prepare().url  # Construir URL completa

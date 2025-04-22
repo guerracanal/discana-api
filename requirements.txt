@@ -12,3 +12,4 @@ MarkupSafe
 requests
 urllib3
 pytz
+requests_oauthlib

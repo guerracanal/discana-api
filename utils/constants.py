@@ -77,6 +77,7 @@ class Routes:
     TRACK = f'{Parameters.TRACK}/{ParametersValues.TRACK}'
     SONG = f'{Parameters.SONG}/{ParametersValues.SONG}'
     PLAYLIST = f'{Parameters.PLAYLIST}/{ParametersValues.PLAYLIST}'
+    DETAIL = 'detail'
     
 
 class Collections:

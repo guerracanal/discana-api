@@ -7,6 +7,10 @@ import random
 import re
 import pytz
 
+from lastfm.services import get_album_info as get_album_info_lastfm
+from spotify.services import make_spotify_request, format_album as format_album_spotify
+from discogs.services import make_discogs_request, format_release as format_album_discogs
+
 # Función base modificada para todos los servicios
 def base_album_service(
     base_query: dict,
@@ -600,4 +604,73 @@ def get_albums_by_type_service(
     results = list(mongo.db[collection_name].aggregate(results_pipeline))
     
     return results, total  # Devolver tupla correcta
+
+def get_album_by_id(
+    album_id: str,
+    collection_name: str = Parameters.ALBUMS,
+    **kwargs
+) -> dict:
+    """Obtiene el detalle de un álbum por su ID."""
+    album = mongo.db[collection_name].find_one({"_id": album_id})
+    if album:
+        album["_id"] = str(album["_id"])
+    return album or {"error": "Album not found"}
+
+def get_album_by_title_and_artist(
+    title: str,
+    artist: str,
+    collection_name: str = Parameters.ALBUMS,
+    **kwargs
+) -> dict:
+    """Obtiene el detalle de un álbum por su título y artista desde MongoDB, Last.fm, Spotify y Discogs."""
+    # Buscar en MongoDB
+    album = mongo.db[collection_name].find_one({
+        "title": {"$regex": f".*{title}.*", "$options": "i"},
+        "artist": {"$regex": f".*{artist}.*", "$options": "i"}
+    })
+    if album:
+        album["_id"] = str(album["_id"])
+    else:
+        album = {"error": "Album not found in MongoDB"}
+
+    # Buscar en Last.fm
+    try:
+        lastfm_data = get_album_info_lastfm(artist=artist, album=title)
+        if lastfm_data:
+            album["lastfm"] = lastfm_data
+    except Exception as e:
+        logger.error(f"Error fetching album from Last.fm: {e}", exc_info=True)
+        album["lastfm"] = {"error": "Failed to fetch data from Last.fm"}
+
+    # Buscar en Spotify
+    try:
+        spotify_data = make_spotify_request(
+            endpoint="search",
+            q=f"album:{title} artist:{artist}",
+            type="album",
+            limit=1,
+            no_user_neccessary=True  # Indicar que no se requiere user_id
+        )
+        if spotify_data.get("albums", {}).get("items"):
+            album["spotify"] = format_album_spotify(spotify_data["albums"]["items"][0])
+    except Exception as e:
+        logger.error(f"Error fetching album from Spotify: {e}", exc_info=True)
+        album["spotify"] = {"error": "Failed to fetch data from Spotify"}
+
+    # Buscar en Discogs
+    try:
+        discogs_data = make_discogs_request(
+            endpoint="database/search",
+            q=title,
+            artist=artist,
+            type="release",
+            per_page=1
+        )
+        if discogs_data.get("results"):
+            album["discogs"] = format_album_discogs(discogs_data["results"][0])
+    except Exception as e:
+        logger.error(f"Error fetching album from Discogs: {e}", exc_info=True)
+        album["discogs"] = {"error": "Failed to fetch data from Discogs"}
+
+    return album
 
