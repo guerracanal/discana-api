@@ -54,7 +54,6 @@ def save_discogs_tokens(user_id, encrypted_token):
 def make_discogs_request(endpoint: str, user_id: str = None, **params) -> dict:
     """Realiza solicitudes autenticadas a la API de Discogs"""
     try:
-        print(DiscogsConfig.DISCOGS_API_KEY, DiscogsConfig.DISCOGS_API_SECRET)
         logger.info(f"API Key: {DiscogsConfig.DISCOGS_API_KEY}, API Secret: {DiscogsConfig.DISCOGS_API_SECRET}")
 
         headers = {
@@ -65,7 +64,6 @@ def make_discogs_request(endpoint: str, user_id: str = None, **params) -> dict:
         # Autenticación OAuth si hay usuario
         if user_id:
             tokens = get_discogs_token(user_id)
-            logger.info(f"Tokens recuperados: {tokens}")
             if tokens:
                 headers['Authorization'] = f'OAuth oauth_consumer_key="{DiscogsConfig.DISCOGS_API_KEY}", oauth_token="{tokens[0]}"'
         
@@ -92,17 +90,16 @@ def make_discogs_request(endpoint: str, user_id: str = None, **params) -> dict:
 def format_release(release_data: dict) -> dict:
     """Formatea un release de Discogs a formato estándar"""
     return {
-        "_id": release_data.get('id'),
-        "artist": ", ".join([a.get('name', '') for a in release_data.get('artists', [])]),
-        "title": release_data.get('title'),
+        "discogs_id": release_data.get('id'),
+        "artist": release_data.get('artists', [{}])[0].get('name', ''),
+        "title": release_data.get('title', ''),
+        "country": release_data.get('country', ''),
         "date_release": release_data.get('year'),
         "genre": release_data.get('genres', []),
         "subgenres": release_data.get('styles', []),
         "image": release_data.get('cover_image'),
         "thumbnail": release_data.get('thumb'),
         "tracklist": [t['title'] for t in release_data.get('tracklist', [])],
-        "formats": [f"{f['name']} ({', '.join(f.get('descriptions', []))})" for f in release_data.get('formats', [])],
-        "format": release_data.get('formats', [{}])[0].get('name'),
         "rating": release_data.get('community', {}).get('rating', {}).get('average'),
         "marketplace": {
             "min_price": release_data.get('lowest_price'),

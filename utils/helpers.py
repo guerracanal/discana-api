@@ -165,10 +165,10 @@ def handle_response(service_func):
                                        detail = detail)
             
             # Convertir IDs y paginar
-            converted = [convert_id(album) for album in albums]
+            # converted = [convert_id(album) for album in albums]
             
             return jsonify({
-                "data": converted,
+                "data": albums,
                 "pagination": {
                     "total": total,
                     "page": page,

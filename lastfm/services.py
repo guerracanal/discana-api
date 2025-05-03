@@ -6,6 +6,7 @@ from logging_config import logger
 from cryptography.fernet import Fernet
 from app import mongo
 from pymongo import errors
+import hashlib
 
 # --------------------------
 # Configuración Last.fm
@@ -121,7 +122,7 @@ def format_date_lastfm(date_str: str) -> str:
     except:
         return ""
 
-def get_album_info(artist: str, album: str, mbid: str = None) -> dict:
+def get_album_info(artist: str, album: str, mbid: str = None, user: str = None, include_track_info: bool = False) -> dict:
     """Obtiene información detallada de un álbum, priorizando mbid."""
     try:
         params = {}
@@ -130,6 +131,8 @@ def get_album_info(artist: str, album: str, mbid: str = None) -> dict:
         else:
             params['artist'] = artist
             params['album'] = album
+        if user:
+            params['username'] = user
 
         data = make_lastfm_request('album.getInfo', **params)
         if 'error' in data:  # Check for Last.fm errors
@@ -140,11 +143,79 @@ def get_album_info(artist: str, album: str, mbid: str = None) -> dict:
         if not isinstance(album_info, dict):
             logger.warning(f"Unexpected album_info type from Last.fm API: {type(album_info)}. Returning empty dictionary.")
             return {}
+
+        # Si se solicita información de tracks, invocar el método auxiliar
+        if include_track_info:
+            album_info = _add_track_info_to_album(album_info, artist, user)
+
         return album_info
 
     except Exception as e:
         logger.warning(f"Error obteniendo info de {artist} - {album} (mbid: {mbid}): {str(e)}", exc_info=True)
         return {}
+
+
+def _add_track_info_to_album(album_info: dict, artist: str, user: str) -> dict:
+    """Añade información detallada de los tracks al álbum."""
+    try:
+        tracks = album_info.get('tracks', {}).get('track', [])
+        if isinstance(tracks, dict):  # Si solo hay una pista, convertirla en lista
+            tracks = [tracks]
+
+        user_most_listened_track = None
+        total_most_listened_track = None
+        max_user_playcount = 0
+        max_total_playcount = 0
+
+        for track in tracks:
+            track_name = track.get('name')
+            if not track_name:
+                continue
+
+            # Invocar track.getInfo para obtener userplaycount y playcount
+            try:
+                track_info = make_lastfm_request(
+                    'track.getInfo',
+                    artist=artist,
+                    track=track_name,
+                    username=user
+                )
+                track_user_playcount = int(track_info.get('track', {}).get('userplaycount', 0))
+                track_total_playcount = int(track_info.get('track', {}).get('playcount', 0))
+            except Exception as e:
+                logger.warning(f"Error fetching track info for {track_name}: {str(e)}")
+                track_user_playcount = 0
+                track_total_playcount = 0
+
+            # Determinar la pista más escuchada por el usuario
+            if track_user_playcount > max_user_playcount:
+                max_user_playcount = track_user_playcount
+                user_most_listened_track = {
+                    "name": track_name,
+                    "user_playcount": track_user_playcount
+                }
+
+            # Determinar la pista más escuchada en general
+            if track_total_playcount > max_total_playcount:
+                max_total_playcount = track_total_playcount
+                total_most_listened_track = {
+                    "name": track_name,
+                    "total_playcount": track_total_playcount
+                }
+
+        album_info['user_most_listened_track'] = user_most_listened_track
+        album_info['total_most_listened_track'] = total_most_listened_track
+
+        # Calcular album_playcount
+        user_scrobbles = int(album_info.get('userplaycount', 0))
+        total_tracks = len(tracks)
+        album_info['album_playcount'] = round(user_scrobbles / total_tracks, 2) if total_tracks > 0 else 0
+
+        return album_info
+
+    except Exception as e:
+        logger.error(f"Error añadiendo información de tracks al álbum: {str(e)}")
+        return album_info
 
 def format_album_lastfm(album_data: dict, use_album_info: bool = False) -> dict:
     """Formatea un álbum de Last.fm, enriqueciendo con get_album_info (opcional)."""
@@ -173,14 +244,21 @@ def format_album_lastfm(album_data: dict, use_album_info: bool = False) -> dict:
         total_listeners = 0
 
     tracks = info_album.get('tracks', {}).get('track', [])
-    tracks_total = len(tracks) if tracks else 0
-    duration_total = round(sum(safe_int(track.get('duration', 0)) for track in tracks) / 60, 0)
+    if isinstance(tracks, dict):  # Si solo hay una pista, convertirla en lista
+        tracks = [tracks]
+    elif not isinstance(tracks, list):  # Validar que sea una lista
+        tracks = []
+
+    duration_total = round(
+        sum(safe_int(track.get('duration', 0)) for track in tracks if isinstance(track, dict)) / 60, 0
+    )
 
     genre, subgenres = extract_genres(info_album)
 
     try:
         playcount = safe_int(album_data.get('playcount', 0))
         listeners = safe_int(album_data.get('listeners', 0))
+        tracks_total = len(tracks)  # Calculate the total number of tracks
         listens = playcount // tracks_total if tracks_total > 0 else 0
         percentage_playcount = round((playcount / total_playcount) * 100 if total_playcount > 0 else 0, 2)
         percentage_listeners = round((listeners / total_listeners) * 100 if total_listeners > 0 else 0, 2)
@@ -190,9 +268,12 @@ def format_album_lastfm(album_data: dict, use_album_info: bool = False) -> dict:
         percentage_listeners = 0
         listens = 0
 
+    # Calcular album_playcount
+    user_scrobbles = safe_int(info_album.get('userplaycount', 0))
+    album_playcount = round(user_scrobbles / tracks_total, 2) if tracks_total > 0 else 0
+
     result = {
         "mbid": mbid,
-        "_id": _id,
         "artist": artist_name,
         "title": album_name,
         "date_release": format_date_lastfm(info_album.get('releasedate', '')),
@@ -209,6 +290,9 @@ def format_album_lastfm(album_data: dict, use_album_info: bool = False) -> dict:
         "listens": listens,
         "percentage_playcount": percentage_playcount,
         "percentage_listeners": percentage_listeners,
+        "user_most_listened_track": info_album.get('user_most_listened_track'),
+        "total_most_listened_track": info_album.get('total_most_listened_track'),
+        "album_playcount": album_playcount
     }
     return result
 
@@ -406,3 +490,87 @@ def get_personalized_recommendations(user: str, limit: int = 20) -> List[dict]:
     except Exception as e:
         logger.error(f"Error en recomendaciones personalizadas: {str(e)}")
         return []
+
+def scrobble_album(username: str, album: str, artist: str, timestamp: int = None) -> dict:
+    """
+    Scrobblea todas las canciones de un álbum en Last.fm.
+    
+    :param username: Nombre de usuario de Last.fm.
+    :param album: Nombre del álbum.
+    :param artist: Nombre del artista.
+    :param timestamp: Marca de tiempo para el scrobble (opcional, por defecto usa el tiempo actual).
+    :return: Respuesta de la API de Last.fm.
+    """
+    try:
+        # Obtener la sesión del usuario
+        session_key = get_lastfm_session(username)
+
+        # Obtener información del álbum para obtener las pistas
+        album_info = get_album_info(artist=artist, album=album)
+        tracks = album_info.get('tracks', {}).get('track', [])
+        if isinstance(tracks, dict):  # Si solo hay una pista, convertirla en lista
+            tracks = [tracks]
+
+        if not tracks:
+            raise ValueError(f"No se encontraron pistas para el álbum '{album}' de '{artist}'.")
+
+        # Preparar scrobbles
+        scrobbles = []
+        timestamp = timestamp or int(datetime.utcnow().timestamp())
+        for i, track in enumerate(tracks):
+            scrobbles.append({
+                'track': track.get('name'),
+                'artist': artist,
+                'album': album,
+                'timestamp': timestamp + i  # Incrementar el timestamp para cada pista
+            })
+
+        # Enviar scrobbles a Last.fm
+        params = {
+            'method': 'track.scrobble',
+            'api_key': LastfmConfig.LASTFM_API_KEY,
+            'sk': session_key,
+            'format': 'json'
+        }
+        for i, scrobble in enumerate(scrobbles):
+            params.update({
+                f'track[{i}]': scrobble['track'],
+                f'artist[{i}]': scrobble['artist'],
+                f'album[{i}]': scrobble['album'],
+                f'timestamp[{i}]': scrobble['timestamp']
+            })
+
+        # Firmar la solicitud
+        params['api_sig'] = _generate_lastfm_signature(params)
+
+        # Realizar la solicitud
+        response = requests.post(LastfmConfig.BASE_URL, data=params)
+        response.raise_for_status()
+        data = response.json()
+
+        if 'error' in data:
+            logger.error(f"Error al scrobblear álbum en Last.fm: {data['message']}")
+            raise Exception(data['message'])
+
+        logger.info(f"Álbum '{album}' de '{artist}' scrobbleado exitosamente para el usuario '{username}'.")
+        return data
+
+    except Exception as e:
+        logger.error(f"Error scrobbleando álbum '{album}' de '{artist}' para el usuario '{username}': {str(e)}", exc_info=True)
+        return {"error": str(e)}
+
+
+def _generate_lastfm_signature(params: dict) -> str:
+    """
+    Genera la firma para la solicitud de Last.fm.
+    
+    :param params: Parámetros de la solicitud.
+    :return: Firma generada.
+    """
+    try:
+        sorted_params = ''.join(f"{key}{value}" for key, value in sorted(params.items()) if key != 'format')
+        signature_base = f"{sorted_params}{LastfmConfig.LASTFM_API_SECRET}"
+        return hashlib.md5(signature_base.encode('utf-8')).hexdigest()
+    except Exception as e:
+        logger.error(f"Error generando firma para Last.fm: {str(e)}", exc_info=True)
+        raise

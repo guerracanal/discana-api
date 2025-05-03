@@ -78,8 +78,8 @@ class Routes:
     SONG = f'{Parameters.SONG}/{ParametersValues.SONG}'
     PLAYLIST = f'{Parameters.PLAYLIST}/{ParametersValues.PLAYLIST}'
     DETAIL = 'detail'
+    ALL = 'all'
     
-
 class Collections:
     SPOTIFY = 'spotify'
     LASTFM = 'lastfm'

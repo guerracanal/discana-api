@@ -117,7 +117,7 @@ def make_spotify_request(endpoint: str, **params) -> dict:
         )
         response.raise_for_status()
         data = response.json()
-        if not isinstance(data, dict):  # Validar que la respuesta sea un diccionario
+        if not isinstance(data, (dict, list)):  # Validar que la respuesta sea un diccionario o lista
             logger.error(f"Respuesta inesperada de Spotify API: {data}")
             raise ValueError("Respuesta inesperada de Spotify API")
         logger.debug(f"Respuesta recibida: {data}")
@@ -148,7 +148,7 @@ def format_album(album_data: dict) -> dict:
     artists = album_data.get("artists", [])
     artist_names = ", ".join([a.get("name", "") for a in artists if a is not None])
     return {
-        "_id": album_data.get("id", ""),
+        "spotify_id": album_data.get("id", ""),
         "artist": artist_names,
         "title": album_data.get("name", ""),
         "date_release": format_date(album_data.get("release_date", "")),
