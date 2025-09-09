@@ -2,8 +2,12 @@ from flask import Blueprint, jsonify, request
 
 from lastfm.services import get_user_top_albums
 from utils.constants import Collections, Parameters, ParametersValues, Routes
-from utils.helpers import handle_response, log_route_info
+from utils.helpers import handle_response, log_route_info, require_admin_token
 from albums.services import (
+    create_album_service,
+    delete_album_service,
+    find_album_collection_service,
+    get_album_by_id,
     get_all_albums, 
     get_albums_by_artist,
     get_albums_by_title, 
@@ -23,7 +27,10 @@ from albums.services import (
     get_album_by_db_id,
     get_album_by_mbid,
     get_album_by_discogs_id,
-    get_album_details
+    get_album_details,
+    get_album_of_the_day,
+    move_album_service,
+    update_album_service,  # <-- Agrega esta importación
 )
 from spotify.services import (
     get_albums_spotify,
@@ -392,6 +399,72 @@ def get_new_from_discogs(**params):
     return get_new_releases_discogs(
         **params
     )
+
+# Album del día
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/album_of_the_day/', methods=['GET'])
+@handle_response
+@log_route_info
+def album_of_the_day(collection_name, **params):
+    """
+    Devuelve un álbum distinto cada día para la colección dada.
+    """
+    return get_album_of_the_day(collection_name=collection_name, **params)
+
+# Endpoint para crear álbum
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/', methods=['POST'])
+@require_admin_token
+@log_route_info
+def create_album(collection_name):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing album data"}), 400
+    response, status = create_album_service(collection_name, data)
+    return jsonify(response), status
+
+# Endpoint para modificar álbum
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/<album_id>/', methods=['PUT'])
+@require_admin_token
+@log_route_info
+def update_album(collection_name, album_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing album data"}), 400
+    response, status = update_album_service(collection_name, album_id, data)
+    return jsonify(response), status
+
+# Endpoint para borrar álbum
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/<album_id>/', methods=['DELETE'])
+@require_admin_token
+@log_route_info
+def delete_album(collection_name, album_id):
+    response, status = delete_album_service(collection_name, album_id)
+    return jsonify(response), status
+
+# Endpoint para mover álbum entre colecciones
+@albums_blueprint.route(f'/move/', methods=['POST'])
+@require_admin_token
+@log_route_info
+def move_album():
+    data = request.get_json()
+    origin = data.get("origin_collection")
+    dest = data.get("dest_collection")
+    album_id = data.get("album_id")
+    if not origin or not dest or not album_id:
+        return jsonify({"error": "Missing origin_collection, dest_collection or album_id"}), 400
+    response, status = move_album_service(origin, dest, album_id)
+    return jsonify(response), status
+
+# Endpoint para encontrar colección de un álbum
+@albums_blueprint.route(f'/find_collection/', methods=['GET'])
+@log_route_info
+def find_album_collection():
+    album_id = request.args.get("album_id")
+    spotify_id = request.args.get("spotify_id")
+    title = request.args.get("title")
+    if not (album_id or spotify_id or title):
+        return jsonify({"error": "Missing search parameter (album_id, spotify_id, or title)"}), 400
+    response, status = find_album_collection_service(album_id=album_id, spotify_id=spotify_id, title=title)
+    return jsonify(response), status
 
 
 

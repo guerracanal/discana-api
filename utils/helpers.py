@@ -3,6 +3,7 @@ from app import mongo
 from logging_config import logger
 from flask import jsonify, request
 from functools import wraps
+import os
 
 
 def convert_id(album):
@@ -250,3 +251,20 @@ def get_albums_by_all_compilations(compilations):
             } for compilation in compilations
         ]
     }
+
+ADMIN_TOKENS = os.getenv("ADMIN_TOKENS", "").split(",")
+
+def is_admin_token(token: str) -> bool:
+    return token in ADMIN_TOKENS
+
+def require_admin_token(func):
+    def wrapper(*args, **kwargs):
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid Authorization header"}), 403
+        token = auth_header.replace("Bearer ", "").strip()
+        if not is_admin_token(token):
+            return jsonify({"error": "Forbidden: invalid admin token"}), 403
+        return func(*args, **kwargs)
+    wrapper.__name__ = func.__name__
+    return wrapper

@@ -10,7 +10,7 @@ import requests
 from bson import ObjectId  # Importar ObjectId para manejar IDs de MongoDB
 from urllib.parse import unquote  # Importar para decodificar URL
 
-from lastfm.services import get_album_info as get_album_info_lastfm, make_lastfm_request
+from lastfm.services import get_album_info_lastfm, make_lastfm_request
 from spotify.services import make_spotify_request, format_album as format_album_spotify
 from discogs.services import make_discogs_request, format_release as format_album_discogs
 
@@ -608,6 +608,36 @@ def get_albums_by_type_service(
     
     return results, total  # Devolver tupla correcta
 
+def create_album_service(collection_name, data):
+    try:
+        result = mongo.db[collection_name].insert_one(data)
+        return {"_id": str(result.inserted_id)}, 201
+    except Exception as e:
+        logger.error(f"Error creating album: {e}", exc_info=True)
+        return {"error": "Failed to create album"}, 500
+
+
+def update_album_service(collection_name, album_id, data):
+    try:
+        result = mongo.db[collection_name].update_one({"_id": ObjectId(album_id)}, {"$set": data})
+        if result.matched_count == 0:
+            return {"error": "Album not found"}, 404
+        return {"_id": album_id}, 200
+    except Exception as e:
+        logger.error(f"Error updating album: {e}", exc_info=True)
+        return {"error": "Failed to update album"}, 500
+
+
+def delete_album_service(collection_name, album_id):
+    try:
+        result = mongo.db[collection_name].delete_one({"_id": ObjectId(album_id)})
+        if result.deleted_count == 0:
+            return {"error": "Album not found"}, 404
+        return {"_id": album_id}, 200
+    except Exception as e:
+        logger.error(f"Error deleting album: {e}", exc_info=True)
+        return {"error": "Failed to delete album"}, 500
+
 def get_album_details(
     collection_name: str,
     title: str = None,
@@ -1188,4 +1218,72 @@ def get_album_by_id(
     except Exception as e:
         logger.error(f"Error fetching album by ID: {e}", exc_info=True)
         return {"error": "Failed to fetch album by ID"}
+
+def get_album_of_the_day(
+    collection_name: str = Parameters.ALBUMS,
+    **kwargs
+) -> dict:
+    """
+    Devuelve un álbum distinto cada día para la colección dada.
+    Elige el álbum usando el día del año como índice cíclico.
+    """
+    try:
+        # Obtener todos los álbumes ordenados por _id para consistencia
+        albums = list(mongo.db[collection_name].find({}).sort("_id", 1))
+        total = len(albums)
+        if total == 0:
+            return {"error": "No albums found in collection"}
+        # Día del año (1-366)
+        day_of_year = datetime.now().timetuple().tm_yday
+        idx = (day_of_year - 1) % total
+        album = albums[idx]
+        album["_id"] = str(album["_id"])
+        return album
+    except Exception as e:
+        logger.error(f"Error in get_album_of_the_day: {e}", exc_info=True)
+        return {"error": "Failed to fetch album of the day"}
+
+def move_album_service(origin_collection, dest_collection, album_id):
+    try:
+        album = mongo.db[origin_collection].find_one({"_id": ObjectId(album_id)})
+        if not album:
+            return {"error": "Album not found in origin collection"}, 404
+        album_copy = album.copy()
+        album_copy.pop("_id", None)
+        insert_result = mongo.db[dest_collection].insert_one(album_copy)
+        delete_result = mongo.db[origin_collection].delete_one({"_id": ObjectId(album_id)})
+        return {
+            "moved": True,
+            "new_id": str(insert_result.inserted_id),
+            "deleted": bool(delete_result.deleted_count)
+        }, 200
+    except Exception as e:
+        logger.error(f"Error moving album: {e}", exc_info=True)
+        return {"error": "Failed to move album"}, 500
+
+def find_album_collection_service(album_id=None, spotify_id=None, title=None, collections=None):
+    from bson import ObjectId
+    if collections is None:
+        collections = ["albums", "albums_ptes"]
+    for collection in collections:
+        query = {}
+        if album_id:
+            try:
+                query["_id"] = ObjectId(album_id)
+            except Exception:
+                pass
+        if spotify_id:
+            query["spotify_id"] = spotify_id
+        if title:
+            query["title"] = {"$regex": f".*{title}.*", "$options": "i"}
+        if not query:
+            continue
+        album = mongo.db[collection].find_one(query)
+        if album:
+            album["_id"] = str(album.get("_id"))
+            return {
+                "collection": collection,
+                "album": album
+            }, 200
+    return {"error": "Album not found in any collection"}, 404
 

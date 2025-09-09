@@ -21,6 +21,15 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.3] - 03/05/2025
+
+### Added
+- Servicios de insercción, modificación y eliminado autentificados
+
+### Changed
+- Detalle de Albúm mejorado
+
+
 ## [1.0.2] - 22/04/2025
 ### Added
 - Servicios de Discogs

@@ -122,7 +122,7 @@ def format_date_lastfm(date_str: str) -> str:
     except:
         return ""
 
-def get_album_info(artist: str, album: str, mbid: str = None, user: str = None, include_track_info: bool = False) -> dict:
+def get_album_info_lastfm(artist: str, album: str, mbid: str = None, user: str = None, include_track_info: bool = False) -> dict:
     """Obtiene información detallada de un álbum, priorizando mbid."""
     try:
         params = {}
