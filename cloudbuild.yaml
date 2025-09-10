@@ -36,5 +36,5 @@ substitutions:
   _LASTFM_API_SECRET: ""
   _DISCOGS_API_KEY: ""
   _DISCOGS_API_SECRET: ""
-  _MEMORY: "2Gi"      # Memoria aumentada para procesamiento de imágenes
+  _MEMORY: "3Gi"      # Memoria aumentada para procesamiento de imágenes
   _CPU: "2"           # CPU aumentada para mejor rendimiento
