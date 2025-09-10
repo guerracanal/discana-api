@@ -1,8 +1,10 @@
 # gunicorn.conf.py
-bind = "0.0.0.0:8080"  # Or your desired bind address and port
-workers = 1  # Adjust as needed
+import os
+
+bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
+workers = 3  # Adjust as needed
 threads = 2  # Adjust as needed
-timeout = 300 # Adjust as needed
+timeout = 1000 # Adjust as needed
 graceful_timeout = 300 # Adjust as needed
 
 # ... other Gunicorn settings ...
