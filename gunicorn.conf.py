@@ -1,9 +1,13 @@
-# gunicorn.conf.py
 import os
+import multiprocessing
 
 bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
-workers = 1         # Inicio rápido, luego Cloud Run escala si es necesario
-threads = 1
-timeout = 300         # Aumenta el tiempo de espera para arranque lento
-graceful_timeout = 300
-preload_app = False  # Muy importante: no pre-cargar librerías pesadas
+workers = 1  # Para Cloud Run mejor 1 worker
+threads = 4  # Más threads para manejar requests
+worker_class = "gthread"
+worker_connections = 1000
+timeout = 600  # Más tiempo para cold starts
+keepalive = 120
+max_requests = 1000
+max_requests_jitter = 50
+preload_app = False  # Correcto para lazy loading

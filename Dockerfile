@@ -1,28 +1,33 @@
-# Dockerfile para Cloud Run optimizado
-
 FROM python:3.11-slim-bullseye
 
-# Evitar prompts de apt y actualizar paquetes
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# Instalar librerías del sistema necesarias para OpenCV y otras dependencias nativas
+# Instalar dependencias del sistema más completas
 RUN apt-get update && apt-get install -y \
-    libsm6 libxext6 libgl1-mesa-glx libgl1 libgl1-mesa-dev ffmpeg \
- && rm -rf /var/lib/apt/lists/*
+    libsm6 libxext6 libxrender-dev libgl1-mesa-glx \
+    libglib2.0-0 libgstreamer1.0-0 libgtk2.0-dev \
+    libavcodec-dev libavformat-dev libswscale-dev \
+    libjpeg-dev libpng-dev libtiff-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar archivo de requerimientos e instalar librerías de Python
+# Copiar solo requirements primero (mejor cache de Docker)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto del código
+# Instalar dependencias Python con optimizaciones
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
 COPY . .
 
-# Exponer el puerto que Cloud Run usará
-#ENV PORT=8080
-#EXPOSE 8080
+# Usuario no-root para seguridad
+RUN useradd --create-home --shell /bin/bash app && \
+    chown -R app:app /app
+USER app
 
-# Comando para arrancar Gunicorn
 CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]
