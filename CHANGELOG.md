@@ -21,7 +21,12 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [1.0.3] - 03/05/2025
+## [1.1.0] - 10/09/2025
+
+### Added
+- Servicios de generación de imagenes de cartas
+
+## [1.0.3] - 09/09/2025
 
 ### Added
 - Servicios de insercción, modificación y eliminado autentificados

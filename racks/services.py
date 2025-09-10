@@ -1,4 +1,4 @@
-from app import mongo
+from db import mongo
 from logging_config import logger
 
 def get_all_racks(collection_name: str):

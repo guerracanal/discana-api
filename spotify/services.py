@@ -7,7 +7,7 @@ from typing import List, Tuple
 import requests
 from cryptography.fernet import Fernet
 from logging_config import logger
-from app import mongo
+from db import mongo
 from pymongo import errors
 
 # --------------------------

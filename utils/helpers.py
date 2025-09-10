@@ -1,5 +1,5 @@
 from datetime import datetime
-from app import mongo
+from db import mongo
 from logging_config import logger
 from flask import jsonify, request
 from functools import wraps

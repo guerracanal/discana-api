@@ -1,17 +1,17 @@
 # app.py
 from flask import Flask
-from flask_pymongo import PyMongo
 from config import Config
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 from logging_config import logger
+from db import mongo
 
 # Inicializar Flask
 app = Flask(__name__)
 app.config.from_object(Config)
 
 # Inicializar MongoDB
-mongo = PyMongo(app)
+mongo.init_app(app)
 
 # Habilitar CORS para todas las rutas
 CORS(app)
@@ -35,9 +35,11 @@ from racks.routes import racks_blueprint
 from spotify.routes import spotify_blueprint
 from lastfm.routes import lastfm_blueprint
 from discogs.routes import discogs_blueprint
+from cards.routes import cards_blueprint
 
 app.register_blueprint(albums_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/a')
 app.register_blueprint(racks_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/r')
 app.register_blueprint(spotify_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/spotify')
 app.register_blueprint(lastfm_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/lastfm')
 app.register_blueprint(discogs_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/discogs')
+app.register_blueprint(cards_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/card')

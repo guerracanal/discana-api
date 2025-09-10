@@ -4,7 +4,7 @@ from typing import List, Tuple
 from config import Config
 from logging_config import logger
 from cryptography.fernet import Fernet
-from app import mongo
+from db import mongo
 from pymongo import errors
 import hashlib
 
