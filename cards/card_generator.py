@@ -1,19 +1,16 @@
-import numpy as np
-from PIL import Image, ImageFont, ImageDraw, ImageOps
-import cv2
-from skimage import io as skio
-from cards.utils import custom_data, dominant_colors, rounded_rectangle, spotify_data_pull
-import requests
-from unidecode import unidecode
-import tempfile
-import time
-import psutil
 from io import BytesIO
+import io
+import tempfile
+import requests
 import re
+from cards.utils import custom_data, dominant_colors, rounded_rectangle, spotify_data_pull
 
-card = None
 
 def generator(album = None, resolution = None, icon = None, title = None, subtitle = None, image = None, details = None, jp = None):
+    # Los imports pesados (numpy, cv2, PIL, skimage) solo dentro de las funciones que los usan
+    import numpy as np
+    import cv2
+    from PIL import Image, ImageFont, ImageDraw
     global card  # declare card as a global variable
 
     if album is None:
@@ -117,6 +114,10 @@ def generator(album = None, resolution = None, icon = None, title = None, subtit
     return(card, album_name)
 
 def pil_process_album_art(album, resolution, spacing):
+    # Los imports pesados (numpy, cv2, PIL, skimage) solo dentro de las funciones que los usan
+    import numpy as np
+    import cv2
+    from PIL import Image
     global card  # declare card as a global variable
     
     # Download the image directly to memory using BytesIO
@@ -139,6 +140,11 @@ def pil_process_album_art(album, resolution, spacing):
     return album_art
 
 def process_album_art(data, resolution, spacing):
+    # Los imports pesados (numpy, cv2, PIL, skimage) solo dentro de las funciones que los usan
+    import numpy as np
+    import cv2
+    from skimage import io as skio
+    import os
     global card  # declare card as a global variable
 
     with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -184,6 +190,8 @@ def add_album_art_to_card(album_art, resolution, spacing):
     card[y_offset:y_offset+album_art.shape[0], x_offset:x_offset+album_art.shape[1]] = album_art
 
 def get_font_scale(text, resolution, spacing, font_scale_factor, thickness, margin, font_path=None):
+    import cv2
+    from PIL import ImageFont, ImageDraw, Image
     global card
     if font_path is None:
         for i in range(2 * spacing, 50, -5):
@@ -208,6 +216,8 @@ def get_font_scale(text, resolution, spacing, font_scale_factor, thickness, marg
 
 
 def add_title_to_card(text, resolution, y_position, spacing, font_path=None):
+    import cv2
+    from PIL import ImageFont, ImageDraw, Image
     global card
     font_scale = 0
     font_scale_factor = 5
@@ -233,7 +243,9 @@ def add_title_to_card(text, resolution, y_position, spacing, font_path=None):
     print('title:' + str(font_scale))    
 
 def add_subtitle_to_card(text, resolution, y_position, spacing, font_path=None):
-    global card  # declare card as a global variable
+    import cv2
+    from PIL import ImageFont, ImageDraw, Image
+    global card
     font_scale = 0
     font_scale_factor = 4
     thickness = 10
@@ -261,6 +273,7 @@ def add_subtitle_to_card(text, resolution, y_position, spacing, font_path=None):
 
     
 def add_details_to_card(text, resolution, y_position, spacing):
+    import cv2
     global card  # declare card as a global variable
     font_scale = 0
     font_scale_factor = 5
@@ -276,6 +289,7 @@ def add_details_to_card(text, resolution, y_position, spacing):
     cv2.putText(card, text, (x_position, y_position), cv2.FONT_HERSHEY_COMPLEX, font_scale, (0,0,0), thickness)
 
 def add_populaty_to_card(popularity, resolution, y_position, spacing):
+    import cv2
     global card  # asegurarse de que estás usando la variable global
 
     #text = get_popularity_level(popularity)
@@ -293,7 +307,9 @@ def add_populaty_to_card(popularity, resolution, y_position, spacing):
     cv2.putText(card, popularity, (x_position, y_position), cv2.FONT_HERSHEY_COMPLEX, font_scale, (0, 0, 0), thickness)
 
 def add_horizontal_line(y_start, y_end, album_art):
-    global card  # declare card as a global variable
+    import numpy as np
+    import cv2
+    global card
     
     palette = dominant_colors(album_art)
     num_colors = len(palette)
@@ -317,6 +333,9 @@ def add_horizontal_line(y_start, y_end, album_art):
     card[y_start:y_end, :] = horizontal_line
 
 def add_horizontal_black_lines(y_start, y_end):
+    import numpy as np
+    import cv2
+    global card
 
     # add black lines above and below the colored line
     black_line_height = 5
@@ -329,7 +348,9 @@ def add_horizontal_black_lines(y_start, y_end):
 
 
 def add_border_to_card(album_art):
-    global card  # declare card as a global variable
+    import numpy as np
+    import cv2
+    global card
     palette = dominant_colors(album_art)
 
     num_colors = len(palette)
@@ -373,6 +394,8 @@ def add_border_to_card(album_art):
     card[card.shape[0]-border_width:card.shape[0], :] = bottom_border
 
 def add_black_border_to_card(round_corners=False):
+    import cv2
+    import numpy as np
     global card
 
     border_width = 100
@@ -413,7 +436,9 @@ def add_black_border_to_card(round_corners=False):
         cv2.rectangle(card, (border_width, border_width), (card.shape[1] - border_width, card.shape[0] - border_width), (0, 0, 0), thickness)
 
 def add_spotify_code(album, type, resolution, spacing):
-    global card  # declare card as a global variable
+    import numpy as np
+    import cv2
+    global card
 
     album_url_base = r'https://open.spotify.com/album/'
     if "?" in album:
@@ -447,7 +472,8 @@ def add_spotify_code(album, type, resolution, spacing):
     card[resolution[0]-spacing-creditslogo.shape[0]:resolution[0]-spacing, logo_x:logo_x+creditslogo.shape[1]] = creditslogo
         
 def add_icon(image_file, right_logo, resolution, spacing):
-    global card  # declare card as a global variable
+    import cv2
+    global card
 
     image = cv2.imread(image_file)
     image = cv2.resize(image, (200, 200))  # replace with desired size
@@ -457,7 +483,8 @@ def add_icon(image_file, right_logo, resolution, spacing):
     return image_x
 
 def add_icon_key(image_file, resolution, spacing):
-    global card  # declare card as a global variable
+    import cv2
+    global card
 
     image = cv2.imread("static/images/icons/" + image_file)
     image = cv2.resize(image, (400, 400))  # replace with desired size
@@ -471,7 +498,8 @@ def add_icon_key(image_file, resolution, spacing):
     return image_x
 
 def add_icon_png(image_file, resolution, spacing):
-    global card  # declare card as a global variable
+    import cv2
+    global card
 
     image = cv2.imread("static/images/icons/" + image_file, cv2.IMREAD_UNCHANGED)
     image = cv2.resize(image, (300, 300))  # replace with desired size
@@ -493,7 +521,8 @@ def add_icon_png(image_file, resolution, spacing):
     
 
 def add_label(text, position):
-    global card  # declare card as a global variable
+    import cv2
+    global card
 
     cv2.putText(card, text, position, cv2.FONT_HERSHEY_PLAIN, 3.5, (0,0,0), 5)
 
@@ -554,7 +583,8 @@ def process_text(text, font_path=None):
 
 
 def add_popularity(popularity, resolution, y_position, spacing):
-    global card  # asegurarse de que estás usando la variable global
+    from PIL import ImageDraw, ImageFont, Image
+    global card
     
     # crear un objeto de dibujo para la imagen
     draw = ImageDraw.Draw(Image.fromarray(card))
@@ -579,7 +609,8 @@ def add_popularity(popularity, resolution, y_position, spacing):
     draw.text((x_position, y_position), text, font=font, fill=(255, 255, 255))
 
 if __name__ == '__main__':
-
+    import cv2
+    from PIL import Image
     album = input("Enter Spotify Album link: ")
     if album == '':
         album = 'https://open.spotify.com/album/6D9urpsOWWKtYvF6PaorGE?si=-vOP9zWNQK6Mfq55f3o4kw'
@@ -605,4 +636,3 @@ if __name__ == '__main__':
     cv2.imwrite("{}_card.jpg".format(album_name), card)
 
     Image.open("{}_card.jpg".format(album_name)).show()
- 

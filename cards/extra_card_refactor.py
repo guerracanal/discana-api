@@ -8,10 +8,6 @@ import logging
 import os
 import re
 
-import numpy as np
-import cv2
-from PIL import Image, ImageDraw, ImageFont
-
 from cards.music_genres import MusicGenres
 from cards.mongo_utils import get_mood_descriptors
 
@@ -141,14 +137,6 @@ def hex_to_rgba(hex_color: str, alpha: int = 80) -> Tuple[int, int, int, int]:
     return (r, g, b, alpha)
 
 # ───────────────────────────────────────── TEXTO / FUENTES
-def _text_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> Tuple[int, int]:
-    l, t, r, b = draw.textbbox((0, 0), text, font=font)
-    return r - l, b - t
-
-@lru_cache(maxsize=64)
-def _load_font(path: str, size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(path, size)
-
 def _resolve_font_paths(font_path: str) -> Tuple[str, str]:
     regular = font_path
     bold = font_path.replace('Regular', 'Bold') if 'Regular' in font_path else font_path
@@ -156,8 +144,19 @@ def _resolve_font_paths(font_path: str) -> Tuple[str, str]:
         bold = regular
     return bold, regular
 
+def _text_size(draw, text, font):
+    from PIL import ImageDraw, ImageFont
+    l, t, r, b = draw.textbbox((0, 0), text, font=font)
+    return r - l, b - t
+
+@lru_cache(maxsize=64)
+def _load_font(path: str, size: int):
+    from PIL import ImageFont
+    return ImageFont.truetype(path, size)
+
 @lru_cache(maxsize=128)
-def _load_icon(path: str, size: int) -> Image.Image:
+def _load_icon(path: str, size: int):
+    from PIL import Image
     img = Image.open(path).convert('RGBA')
     return img.resize((size, size), Image.LANCZOS)
 
@@ -227,21 +226,11 @@ class RenderConfig:
 music_genres = MusicGenres()
 
 # ───────────────────────────────────────── RELOJ DE DURACIÓN
-def draw_duration_clock(draw: ImageDraw.ImageDraw, cx: int, cy: int, radius: int,
-                        minutes: int, base_color: Tuple[int, int, int]) -> None:
-    """
-    Dibuja un reloj estilo 'relleno progresivo':
-      - el círculo se pinta con `base_color`
-      - el sector (progreso) se pinta con un tono más oscuro de `base_color`
-      - minutos se limita a [0, 60]
-    """
+def draw_duration_clock(draw, cx, cy, radius, minutes, base_color):
+    from PIL import ImageDraw
     minutes = max(0, min(int(minutes), 60))
     bbox = [cx - radius, cy - radius, cx + radius, cy + radius]
-
-    # Fondo del reloj (color de rango)
     draw.ellipse(bbox, fill=base_color)
-
-    # Sector de progreso (oscurecido)
     if minutes > 0:
         extent = int(360 * minutes / 60)
         sector_color = darken_rgb(base_color, 0.75)
@@ -249,16 +238,15 @@ def draw_duration_clock(draw: ImageDraw.ImageDraw, cx: int, cy: int, radius: int
 
 # ───────────────────────────────────────── BORDE DE ESQUINAS
 def draw_corner_border(img_pil, genre_colors, border_width=50, triangle_size=80, base_color=(50, 50, 50)):
+    import numpy as np
+    import cv2
     card = np.array(img_pil).copy()
     h, w = card.shape[:2]
-
     x1, y1 = border_width, border_width
     x2, y2 = w - border_width, h - border_width
-
     mask = np.zeros_like(card)
     cv2.rectangle(mask, (0, 0), (w, h), base_color, thickness=-1)
     cv2.rectangle(mask, (x1, y1), (x2, y2), (0, 0, 0), thickness=-1)
-
     colors = genre_colors[:4]
     cc = {"tl": base_color, "tr": base_color, "bl": base_color, "br": base_color}
     if len(colors) == 1:
@@ -269,7 +257,6 @@ def draw_corner_border(img_pil, genre_colors, border_width=50, triangle_size=80,
         cc["tl"] = cc["br"] = colors[0]; cc["tr"] = colors[1]; cc["bl"] = colors[2]
     elif len(colors) == 4:
         cc["tl"], cc["tr"], cc["bl"], cc["br"] = colors
-
     off = border_width
     pts = np.array([[off, off], [off+triangle_size, off], [off, off+triangle_size]], np.int32)
     cv2.fillConvexPoly(mask, pts, cc["tl"])
@@ -279,7 +266,6 @@ def draw_corner_border(img_pil, genre_colors, border_width=50, triangle_size=80,
     cv2.fillConvexPoly(mask, pts, cc["bl"])
     pts = np.array([[w-off, h-off], [w-off-triangle_size, h-off], [w-off, h-off-triangle_size]], np.int32)
     cv2.fillConvexPoly(mask, pts, cc["br"])
-
     mask_bool = np.any(mask != 0, axis=2)
     card[mask_bool] = mask[mask_bool]
     return card
@@ -298,7 +284,10 @@ def make_extra_card(
     font_path: str = DEFAULT_FONT_PATH,
     *,
     config: Optional[RenderConfig] = None,
-) -> np.ndarray:
+) -> 'np.ndarray':
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont
+    import cv2
 
     cfg = config or RenderConfig(resolution=resolution, font_path=font_path, text_box_position=text_box_position)
     H, W, _ = cfg.resolution
