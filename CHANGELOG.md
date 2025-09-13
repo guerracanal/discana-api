@@ -21,6 +21,11 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.1] - 13/09/2025
+
+### Added
+- Servicios de llm
+
 ## [1.1.0] - 10/09/2025
 
 ### Added

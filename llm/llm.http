@@ -1,0 +1,82 @@
+@baseUrl = http://localhost:8080/api/v2
+
+@authHeader = Bearer tok_xxx
+
+### Test Genre Endpoint - Ejemplo con álbum conocido
+POST {{baseUrl}}/llm/genre
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+{
+  "title": "Dark Side of the Moon",
+  "artist": "Pink Floyd",
+  "label": "Harvest Records",
+  "release_date": "1973-03-01"
+}
+
+###
+
+### Test Genre Endpoint - Ejemplo con álbum en español
+POST {{baseUrl}}/llm/genre
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+{
+  "title": "El Madrileño",
+  "artist": "C. Tangana",
+  "label": "Sony Music",
+  "release_date": "2021-02-26"
+}
+
+###
+
+### Test Genre Endpoint - Ejemplo con datos mínimos
+POST {{baseUrl}}/llm/genre
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+{
+  "title": "Nevermind",
+  "artist": "Nirvana",
+  "label": "",
+  "release_date": ""
+}
+
+###
+
+### Test Genre Endpoint - Ejemplo con álbum electrónico
+POST {{baseUrl}}/llm/genre
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+{
+  "title": "Discovery",
+  "artist": "Daft Punk",
+  "label": "Virgin Records",
+  "release_date": "2001-02-26"
+}
+
+###
+
+### Test con álbum latino
+POST {{baseUrl}}/llm/genre
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+{
+  "title": "Un Verano Sin Ti",
+  "artist": "Bad Bunny",
+  "label": "Rimas Entertainment",
+  "release_date": "2022-05-06"
+}
+
+
+### Test models
+GET {{baseUrl}}/llm/test-models
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+### list models
+GET {{baseUrl}}/llm/list-models
+Content-Type: application/json
+Authorization: {{authHeader}}
