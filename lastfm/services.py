@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 from typing import List, Tuple
 from config import Config
@@ -7,6 +7,7 @@ from cryptography.fernet import Fernet
 from db import mongo
 from pymongo import errors
 import hashlib
+import random
 
 # --------------------------
 # Configuración Last.fm
@@ -394,6 +395,63 @@ def get_user_top_albums(**params) -> Tuple[List[dict], int]:
 
     except Exception as e:
         logger.error(f"Error en top álbumes: {str(e)}", exc_info=True)
+        raise
+
+def get_forgotten_albums(user_id: str, days_ago: int = 730, page: int = 1, limit: int = 10) -> Tuple[List[dict], int]:
+    """
+    Devuelve los álbumes más escuchados por un usuario que no ha escuchado recientemente.
+    """
+    try:
+        # 1. Obtener los álbumes más escuchados del usuario (histórico)
+        top_albums, _ = get_user_top_albums(user_id=user_id, period='overall', limit=500)
+
+        # 2. Obtener los álbumes escuchados recientemente
+        from_timestamp = int((datetime.now() - timedelta(days=days_ago)).timestamp())
+        recent_tracks_data = make_lastfm_request(
+            'user.getRecentTracks',
+            user=user_id,
+            limit=1000,
+            from_param=from_timestamp
+        )
+        recent_tracks = recent_tracks_data.get('recenttracks', {}).get('track', [])
+
+        recent_album_keys = set()
+        for track in recent_tracks:
+            artist_name = track.get('artist', {}).get('#text')
+            album_name = track.get('album', {}).get('#text')
+            if artist_name and album_name:
+                recent_album_keys.add(f"{artist_name}_{album_name}")
+
+        # 3. Filtrar los álbumes más escuchados para excluir los recientes
+        forgotten_albums = [
+            album for album in top_albums
+            if f"{album['artist']}_{album['title']}" not in recent_album_keys
+        ]
+
+        # 4. Paginación
+        start = (page - 1) * limit
+        end = start + limit
+        paginated_albums = forgotten_albums[start:end]
+
+        return paginated_albums, len(forgotten_albums)
+
+    except Exception as e:
+        logger.error(f"Error en get_forgotten_albums: {str(e)}", exc_info=True)
+        raise
+
+def get_random_forgotten_album(user_id: str, days_ago: int = 730) -> dict:
+    """
+    Devuelve un álbum aleatorio de los álbumes olvidados de un usuario.
+    """
+    try:
+        forgotten_albums, total = get_forgotten_albums(user_id=user_id, days_ago=days_ago, limit=500)
+        if not forgotten_albums:
+            return {}
+
+        return random.choice(forgotten_albums)
+
+    except Exception as e:
+        logger.error(f"Error en get_random_forgotten_album: {str(e)}", exc_info=True)
         raise
 
 def get_country_top_albums(country: str, page: int = 1, per_page: int = 20) -> Tuple[List[dict], int]:

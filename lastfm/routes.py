@@ -1,10 +1,15 @@
-from flask import Blueprint, redirect, request, current_app
+from flask import Blueprint, redirect, request, current_app, jsonify
 import hashlib
 import requests
 import os
 
 from config import Config
-from lastfm.services import save_lastfm_session
+from lastfm.services import (
+    save_lastfm_session, 
+    scrobble_album,
+    get_forgotten_albums,
+    get_random_forgotten_album
+)
 from utils.constants import Collections, Parameters
 
 lastfm_blueprint = Blueprint(Collections.LASTFM, __name__)
@@ -78,3 +83,64 @@ def lastfm_callback():
     except Exception as e:
         current_app.logger.error(f"Last.fm callback error: {str(e)}")
         return redirect(f"{LASTFM_FRONTEND_REDIRECT_URI}/error?code=auth_failed")
+
+@lastfm_blueprint.route('/scrobble_album', methods=['POST'])
+def scrobble_album_route():
+    """
+    Endpoint to scrobble an entire album for a user.
+    """
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        album = data.get('album')
+        artist = data.get('artist')
+
+        if not all([username, album, artist]):
+            return jsonify({'error': 'Missing required parameters: username, album, artist'}), 400
+
+        result = scrobble_album(username, album, artist)
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Error scrobbling album: {str(e)}")
+        return jsonify({'error': 'An internal error occurred'}), 500
+
+@lastfm_blueprint.route('/forgotten_albums', methods=['GET'])
+def forgotten_albums_route():
+    """
+    Get forgotten albums for a user.
+    """
+    try:
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'user_id is required'}), 400
+
+        days_ago = int(request.args.get('days_ago', 730))
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+
+        albums, total = get_forgotten_albums(user_id, days_ago, page, limit)
+        return jsonify({'albums': albums, 'total': total})
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting forgotten albums: {str(e)}")
+        return jsonify({'error': 'An internal error occurred'}), 500
+
+@lastfm_blueprint.route('/random_forgotten_album', methods=['GET'])
+def random_forgotten_album_route():
+    """
+    Get a random forgotten album for a user.
+    """
+    try:
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'user_id is required'}), 400
+
+        days_ago = int(request.args.get('days_ago', 730))
+
+        album = get_random_forgotten_album(user_id, days_ago)
+        return jsonify(album)
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting random forgotten album: {str(e)}")
+        return jsonify({'error': 'An internal error occurred'}), 500

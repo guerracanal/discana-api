@@ -638,6 +638,20 @@ def delete_album_service(collection_name, album_id):
         logger.error(f"Error deleting album: {e}", exc_info=True)
         return {"error": "Failed to delete album"}, 500
 
+def add_to_collection_name_service(collection_name, album_id, new_collection_name):
+    try:
+        result = mongo.db[collection_name].update_one(
+            {"_id": ObjectId(album_id)},
+            {"$addToSet": {"collection_name": new_collection_name}}
+        )
+        if result.matched_count == 0:
+            return {"error": "Album not found"}, 404
+        return {"_id": album_id, "collection_name": new_collection_name}, 200
+    except Exception as e:
+        logger.error(f"Error adding to collection_name: {e}", exc_info=True)
+        return {"error": "Failed to add to collection_name"}, 500
+
+
 def get_album_details(
     collection_name: str,
     title: str = None,

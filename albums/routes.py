@@ -369,7 +369,7 @@ def get_albums_from_spotify(type, **params):
 # Last.FM ENDPOINTS #
 #####################
 
-# Get Saved Albums from Spotify
+# Get Albums from LastFM
 @albums_blueprint.route(f'/{Collections.LASTFM}/{Parameters.ME}/', methods=['GET'])
 @handle_response
 @log_route_info
@@ -431,6 +431,18 @@ def update_album(collection_name, album_id):
         return jsonify({"error": "Missing album data"}), 400
     response, status = update_album_service(collection_name, album_id, data)
     return jsonify(response), status
+
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/<album_id>/add_collection', methods=['PUT'])
+@require_admin_token
+@log_route_info
+def add_to_collection_name(collection_name, album_id):
+    data = request.get_json()
+    new_collection_name = data.get("collection_name")
+    if not new_collection_name:
+        return jsonify({"error": "Missing collection_name"}), 400
+    response, status = add_to_collection_name_service(collection_name, album_id, new_collection_name)
+    return jsonify(response), status
+
 
 # Endpoint para borrar álbum
 @albums_blueprint.route(f'/{ParametersValues.COLLECTION}/<album_id>/', methods=['DELETE'])
