@@ -1,0 +1,11 @@
+Actúa como un experto musicólogo y melómano. A continuación, te proporciono una lista de los álbumes de la colección de un usuario en Discogs:
+
+{albums}
+
+Analiza los gustos del usuario y define su perfil melómano. El texto debe ser breve y conciso, en castellano y en texto plano. Debe incluir:
+
+- Preferencias de géneros y subgéneros.
+- Décadas y moods predominantes.
+- Recomendaciones personalizadas de artistas y álbumes que no estén en la lista.
+
+El texto debe ir al grano, sin introducción ni presentaciones.

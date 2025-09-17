@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from utils.helpers import require_admin_token
-from llm.services import get_album_genres, get_album_description_and_country, get_available_models, get_melomaniac_profile
+from llm.services import get_album_genres, get_album_description_and_country, get_available_models, get_discogs_melomaniac_profile, get_lastfm_melomaniac_profile, get_spotify_melomaniac_profile
 import google.generativeai as genai
 from spotify.services import make_spotify_request, get_album_by_id
 
@@ -142,14 +142,38 @@ def test_models():
         "recommendation": "Usa el primer modelo con ✅ para mejor rendimiento"
     })
 
-@llm_blueprint.route('/profile/<user_id>', methods=['GET'])
+@llm_blueprint.route('/profile/discogs/<user_id>', methods=['GET'])
 @require_admin_token
-def melomaniac_profile(user_id):
+def discogs_melomaniac_profile(user_id):
     """
-    Genera un perfil melómano para un usuario.
+    Genera un perfil melómano para un usuario basado en su colección de Discogs.
     """
     try:
-        response_json = get_melomaniac_profile(user_id)
+        response_json = get_discogs_melomaniac_profile(user_id)
+        return jsonify(response_json)
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@llm_blueprint.route('/profile/lastfm/<user_id>', methods=['GET'])
+@require_admin_token
+def lastfm_melomaniac_profile(user_id):
+    """
+    Genera un perfil melómano para un usuario basado en sus álbumes más escuchados de Last.fm.
+    """
+    try:
+        response_json = get_lastfm_melomaniac_profile(user_id)
+        return jsonify(response_json)
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@llm_blueprint.route('/profile/spotify/<user_id>', methods=['GET'])
+@require_admin_token
+def spotify_melomaniac_profile(user_id):
+    """
+    Genera un perfil melómano para un usuario basado en sus álbumes guardados de Spotify.
+    """
+    try:
+        response_json = get_spotify_melomaniac_profile(user_id)
         return jsonify(response_json)
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500

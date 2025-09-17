@@ -3,6 +3,8 @@ import os
 import json
 import time
 from lastfm.services import get_user_top_albums
+from discogs.services import get_user_collection
+from spotify.services import get_saved_albums_spotify
 
 def get_available_models():
     """
@@ -226,9 +228,9 @@ def get_album_description_and_country(album_title, artist, label, release_date, 
             "json_error": str(e)
         }
 
-def get_melomaniac_profile(user_id):
+def get_lastfm_melomaniac_profile(user_id):
     """
-    Genera un perfil melómano para un usuario basado en sus álbumes más escuchados.
+    Genera un perfil melómano para un usuario basado en sus álbumes más escuchados de Last.fm.
     """
     try:
         # Obtener los álbumes más escuchados del usuario
@@ -237,20 +239,64 @@ def get_melomaniac_profile(user_id):
         if not top_albums:
             return {"error": "No se pudieron obtener los álbumes más escuchados del usuario."}
 
-        # Construir el prompt para el modelo Gemini
-        prompt = f"""
-        Actúa como un experto musicólogo y melómano. A continuación, te proporciono una lista de los álbumes más escuchados por un usuario en Last.fm:
+        with open('llm/prompt_lastfm_melomaniac_profile.txt', 'r') as f:
+            prompt_template = f.read()
 
-        {json.dumps(top_albums, indent=2)}
+        prompt = prompt_template.format(albums=json.dumps(top_albums, indent=2))
 
-        Por favor, redacta un perfil melómano detallado para este usuario. El perfil debe incluir:
+        # Llamar al modelo Gemini
+        profile_text = ask_gemini(prompt)
 
-        1.  **Análisis de Gustos y Preferencias:** Describe en detalle los gustos musicales del usuario. ¿Qué géneros predominan? ¿Hay artistas o estilos recurrentes? ¿Prefiere la música de una década o país en particular?
-        2.  **Álbumes Más Escuchados:** Comenta sobre los álbumes más importantes de la lista. ¿Qué los hace especiales? ¿Hay alguna conexión o historia entre ellos (por ejemplo, son del mismo artista, del mismo movimiento musical, etc.)?
-        3.  **Recomendaciones Personales:** Basado en el análisis anterior, sugiere una lista de 5 a 10 artistas y álbumes que el usuario debería escuchar. Estas recomendaciones deben ser relevantes para sus gustos, pero no deben estar en la lista de los más escuchados. Justifica cada recomendación.
+        if profile_text:
+            return {"profile": profile_text}
+        else:
+            return {"error": "No se pudo generar el perfil melómano."}
 
-        El resultado debe ser un texto coherente, bien redactado y con un tono amigable y experto.
-        """
+    except Exception as e:
+        return {"error": f"Ocurrió un error al generar el perfil: {str(e)}"}
+
+def get_discogs_melomaniac_profile(user_id):
+    """
+    Genera un perfil melómano para un usuario basado en su colección de Discogs.
+    """
+    try:
+        # Obtener la colección de álbumes del usuario
+        collection, _ = get_user_collection(user_id=user_id, limit=100)
+
+        if not collection:
+            return {"error": "No se pudo obtener la colección de álbumes del usuario."}
+
+        with open('llm/prompt_discogs_melomaniac_profile.txt', 'r') as f:
+            prompt_template = f.read()
+
+        prompt = prompt_template.format(albums=json.dumps(collection, indent=2))
+
+        # Llamar al modelo Gemini
+        profile_text = ask_gemini(prompt)
+
+        if profile_text:
+            return {"profile": profile_text}
+        else:
+            return {"error": "No se pudo generar el perfil melómano."}
+
+    except Exception as e:
+        return {"error": f"Ocurrió un error al generar el perfil: {str(e)}"}
+
+def get_spotify_melomaniac_profile(user_id):
+    """
+    Genera un perfil melómano para un usuario basado en sus álbumes guardados de Spotify.
+    """
+    try:
+        # Obtener los álbumes guardados del usuario
+        saved_albums, _ = get_saved_albums_spotify(user_id=user_id, limit=50)
+
+        if not saved_albums:
+            return {"error": "No se pudieron obtener los álbumes guardados del usuario."}
+
+        with open('llm/prompt_spotify_melomaniac_profile.txt', 'r') as f:
+            prompt_template = f.read()
+
+        prompt = prompt_template.format(albums=json.dumps(saved_albums, indent=2))
 
         # Llamar al modelo Gemini
         profile_text = ask_gemini(prompt)
