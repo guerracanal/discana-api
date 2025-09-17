@@ -219,7 +219,7 @@ def _add_track_info_to_album(album_info: dict, artist: str, user: str) -> dict:
         return album_info
 
 def format_album_lastfm(album_data: dict, use_album_info: bool = False) -> dict:
-    """Formatea un álbum de Last.fm, enriqueciendo con get_album_info (opcional)."""
+    """Formatea un álbum de Last.fm, enriqueciendo con get_album_info_lastfm (opcional)."""
     if not isinstance(album_data, dict):
         logger.error(f"Error: album_data is not a dictionary: {album_data}", exc_info=True)
         return {"error": "invalid_album_data"}
@@ -231,7 +231,7 @@ def format_album_lastfm(album_data: dict, use_album_info: bool = False) -> dict:
 
     info_album = {}  # Initialize as empty dictionary
     if use_album_info:
-        info_album = get_album_info(artist_name, album_name, mbid)
+        info_album = get_album_info_lastfm(artist_name, album_name, mbid)
         if not isinstance(info_album, dict):
             logger.warning(f"Unexpected info_album type: {type(info_album)}. Using album_data.")
             info_album = {}
@@ -514,7 +514,7 @@ def get_user_recent_albums(user: str, limit: int = 20) -> List[dict]:
                 album_id = f"{artist}_{album_name}"
                 
                 if album_id not in albums:
-                    full_data = get_album_info(artist, album_name)
+                    full_data = get_album_info_lastfm(artist, album_name)
                     if full_data:
                         albums[album_id] = format_album_lastfm(full_data)
         
@@ -564,7 +564,7 @@ def scrobble_album(username: str, album: str, artist: str, timestamp: int = None
         session_key = get_lastfm_session(username)
 
         # Obtener información del álbum para obtener las pistas
-        album_info = get_album_info(artist=artist, album=album)
+        album_info = get_album_info_lastfm(artist=artist, album=album)
         tracks = album_info.get('tracks', {}).get('track', [])
         if isinstance(tracks, dict):  # Si solo hay una pista, convertirla en lista
             tracks = [tracks]
