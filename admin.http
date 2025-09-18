@@ -5,6 +5,7 @@
 # Discos
 POST {{baseUrl}}/admin/dump-google-sheet-data-to-db
 Content-Type: application/json
+Authorization: {{authHeader}}
 
 {
     "spreadsheet": "Inventario Discos",

@@ -1,33 +1,36 @@
 FROM python:3.11-slim-bullseye
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+# Set environment variables for a non-interactive setup and optimized Python execution
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# Instalar dependencias del sistema más completas
-RUN apt-get update && apt-get install -y \
-    libsm6 libxext6 libxrender-dev libgl1-mesa-glx \
-    libglib2.0-0 libgstreamer1.0-0 libgtk2.0-dev \
-    libavcodec-dev libavformat-dev libswscale-dev \
-    libjpeg-dev libpng-dev libtiff-dev \
+# Minimal system dependencies
+# We only need pkg-config for some Python packages that might compile C extensions.
+# The rest of the previously listed libraries were related to GUI/media processing and are not needed.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/*
 
+# Set the working directory in the container
 WORKDIR /app
 
-# Copiar solo requirements primero (mejor cache de Docker)
+# Copy only the requirements file first to leverage Docker layer caching.
+# This ensures that dependencies are not re-installed unless the requirements file changes.
 COPY requirements.txt .
 
-# Instalar dependencias Python con optimizaciones
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+# Install Python dependencies
+# Using --no-cache-dir reduces the image size.
+RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the application code
 COPY . .
 
-# Usuario no-root para seguridad
+# Create and switch to a non-root user for better security
 RUN useradd --create-home --shell /bin/bash app && \
     chown -R app:app /app
 USER app
 
+# Command to run the application using Gunicorn
 CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]

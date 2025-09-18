@@ -45,4 +45,5 @@ app.register_blueprint(spotify_blueprint, url_prefix=f'{app.config["API_PREFIX"]
 app.register_blueprint(lastfm_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/lastfm')
 app.register_blueprint(discogs_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/discogs')
 app.register_blueprint(cards_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/card')
-app.register_blueprint(llm_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/admin')
+app.register_blueprint(llm_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/llm')
+app.register_blueprint(admin_blueprint, url_prefix=f'{app.config["API_PREFIX"]}/admin')
