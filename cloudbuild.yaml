@@ -22,3 +22,21 @@ steps:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _API_VERSION: "v2"
+  _MONGO_URI: ""
+  _ENCRYPTION_KEY: ""
+  _SPOTIFY_CLIENT_ID: ""
+  _SPOTIFY_SECRET: ""
+  _LASTFM_API_KEY: ""
+  _LASTFM_API_SECRET: ""
+  _DISCOGS_API_KEY: ""
+  _DISCOGS_API_SECRET: ""
+  _FRONTEND_URL: ""
+  _API_URL: ""
+  _GEMINI_API_KEY: ""
+  _ADMIN_TOKENS: ""
+  _GOOGLE_CREDENTIALS_JSON: ""
+  _MEMORY: "3Gi"
+  _CPU: "2"
