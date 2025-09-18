@@ -32,6 +32,20 @@ jobs:
         run: gcloud auth list
         
       - name: Deploy to Cloud Run
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_SECRET: ${{ secrets.SPOTIFY_SECRET }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
+          DISCOGS_API_KEY: ${{ secrets.DISCOGS_API_KEY }}
+          DISCOGS_API_SECRET: ${{ secrets.DISCOGS_API_SECRET }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          API_URL: ${{ secrets.API_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ADMIN_TOKENS: ${{ secrets.ADMIN_TOKENS }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: |
           gcloud builds submit --config cloudbuild.yaml \
-            --substitutions=_SHORT_SHA=${SHORT_SHA},_API_VERSION=v2,_MONGO_URI=${{ secrets.MONGO_URI }},_ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }},_SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }},_SPOTIFY_SECRET=${{ secrets.SPOTIFY_SECRET }},_LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }},_LASTFM_API_SECRET=${{ secrets.LASTFM_API_SECRET }},_DISCOGS_API_KEY=${{ secrets.DISCOGS_API_KEY }},_DISCOGS_API_SECRET=${{ secrets.DISCOGS_API_SECRET }},_FRONTEND_URL=${{ secrets.FRONTEND_URL }},_API_URL=${{ secrets.API_URL }},_MEMORY=3Gi,_CPU=2,_GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},_ADMIN_TOKENS=${{ secrets.ADMIN_TOKENS }},_GOOGLE_CREDENTIALS_JSON=${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+            --substitutions="_SHORT_SHA=${SHORT_SHA},_API_VERSION=v2,_MEMORY=3Gi,_CPU=2,_MONGO_URI=${MONGO_URI},_ENCRYPTION_KEY=${ENCRYPTION_KEY},_SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID},_SPOTIFY_SECRET=${SPOTIFY_SECRET},_LASTFM_API_KEY=${LASTFM_API_KEY},_LASTFM_API_SECRET=${LASTFM_API_SECRET},_DISCOGS_API_KEY=${DISCOGS_API_KEY},_DISCOGS_API_SECRET=${DISCOGS_API_SECRET},_FRONTEND_URL=${FRONTEND_URL},_API_URL=${API_URL},_GEMINI_API_KEY=${GEMINI_API_KEY},_ADMIN_TOKENS=${ADMIN_TOKENS},_GOOGLE_CREDENTIALS_JSON=${GOOGLE_CREDENTIALS_JSON}"
