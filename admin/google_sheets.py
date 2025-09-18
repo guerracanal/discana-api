@@ -20,8 +20,7 @@ def get_data_from_google_sheet(spreadsheet_name, sheet_name):
     Fetches and processes data from a specific tab in a Google Sheet.
 
     It authenticates using credentials from the `GOOGLE_CREDENTIALS_JSON` environment
-    variable (recommended for production) or falls back to a local `credenciales.json`
-    file for development.
+    variable.
 
     Args:
         spreadsheet_name (str): The name of the Google Spreadsheet.
@@ -33,6 +32,7 @@ def get_data_from_google_sheet(spreadsheet_name, sheet_name):
     Raises:
         gspread.exceptions.SpreadsheetNotFound: If the spreadsheet is not found.
         gspread.exceptions.WorksheetNotFound: If the worksheet is not found.
+        ValueError: If the `GOOGLE_CREDENTIALS_JSON` environment variable is not set.
         Exception: For other unexpected errors.
     """
     try:
@@ -41,16 +41,14 @@ def get_data_from_google_sheet(spreadsheet_name, sheet_name):
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
         # --- Authentication ---
-        # The recommended way for production is to use an environment variable.
         google_creds_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-        if google_creds_json_str:
-            logging.info("Found GOOGLE_CREDENTIALS_JSON env var. Authenticating from string.")
-            creds_dict = json.loads(google_creds_json_str)
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        else:
-            # Fallback for local development: use the JSON file.
-            logging.info("GOOGLE_CREDENTIALS_JSON env var not found. Falling back to 'credenciales.json' file.")
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credenciales.json", scope)
+        if not google_creds_json_str:
+            logging.error("CRITICAL: The GOOGLE_CREDENTIALS_JSON environment variable is not set.")
+            raise ValueError("Authentication failed: The GOOGLE_CREDENTIALS_JSON environment variable must be set.")
+
+        logging.info("Found GOOGLE_CREDENTIALS_JSON. Authenticating from environment variable.")
+        creds_dict = json.loads(google_creds_json_str)
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         
         client = gspread.authorize(creds)
         
@@ -115,6 +113,9 @@ def get_data_from_google_sheet(spreadsheet_name, sheet_name):
     except gspread.exceptions.WorksheetNotFound:
         logging.error(f"Worksheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'.")
         raise
+    except ValueError as e:
+        # Pass the credential error up to the service layer.
+        raise e
     except Exception as e:
         logging.error(f"An unexpected error occurred while accessing Google Sheets: {e}", exc_info=True)
         raise
