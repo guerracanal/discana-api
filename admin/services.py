@@ -20,7 +20,7 @@ def dump_google_sheet_data_to_db(spreadsheet, sheet, collection_name):
         int: The number of records successfully inserted into the database.
     
     Raises:
-        ValueError: If the MONGO_SRV environment variable is not set.
+        ValueError: If the MONGO_URI environment variable is not set.
         ConnectionFailure: If a connection to MongoDB cannot be established.
         Exception: For errors during data fetching or database operations.
     """
@@ -34,15 +34,15 @@ def dump_google_sheet_data_to_db(spreadsheet, sheet, collection_name):
         return 0
 
     # 2. Connect to MongoDB
-    mongo_srv = os.environ.get("MONGO_SRV")
-    if not mongo_srv:
-        logging.error("MONGO_SRV environment variable is not set.")
-        raise ValueError("MONGO_SRV environment variable must be set to connect to the database.")
+    MONGO_URI = os.environ.get("MONGO_URI")
+    if not MONGO_URI:
+        logging.error("MONGO_URI environment variable is not set.")
+        raise ValueError("MONGO_URI environment variable must be set to connect to the database.")
 
     client = None  # Initialize client to None to ensure it can be closed in a finally block
     try:
         logging.info("Connecting to MongoDB...")
-        client = MongoClient(mongo_srv, serverSelectionTimeoutMS=5000) # Set a timeout
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000) # Set a timeout
         # The ismaster command is cheap and does not require auth.
         client.admin.command('ismaster')
         logging.info("Successfully connected to MongoDB.")
@@ -74,3 +74,27 @@ def dump_google_sheet_data_to_db(spreadsheet, sheet, collection_name):
         if client:
             client.close()
             logging.info("MongoDB connection closed.")
+
+# En admin/routes.py
+@admin_blueprint.route("/debug/google-creds", methods=["GET"])
+def debug_google_creds():
+    """Debug para verificar GOOGLE_CREDENTIALS_JSON"""
+    import os
+    
+    google_creds = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    
+    if google_creds:
+        return jsonify({
+            "status": "FOUND",
+            "length": len(google_creds),
+            "starts_with": google_creds[:50] if len(google_creds) > 50 else google_creds,
+            "is_valid_json": "yes" if google_creds.startswith('{') else "no"
+        })
+    else:
+        # Listar todas las variables de entorno que empiecen con GOOGLE
+        all_vars = {k: "SET" for k in os.environ.keys() if "GOOGLE" in k.upper()}
+        return jsonify({
+            "status": "NOT_FOUND",
+            "google_vars": all_vars,
+            "total_env_vars": len(os.environ)
+        })

@@ -58,3 +58,41 @@ def dump_google_sheet_data_to_db_route():
             "status": "error", 
             "message": f"An internal error occurred. Please check the server logs for details. Error: {e}"
         }), 500
+
+
+# Añadir a admin/routes.py
+
+@admin_blueprint.route("/debug/env", methods=["GET"])
+def debug_env_vars():
+    """
+    Endpoint de debug para verificar qué variables de entorno están disponibles
+    ⚠️ ELIMINAR EN PRODUCCIÓN por seguridad
+    """
+    import os
+    
+    # Variables que esperamos
+    expected_vars = [
+        "GOOGLE_CREDENTIALS_JSON",
+        "MONGO_URI", 
+        "GEMINI_API_KEY",
+        "ADMIN_TOKENS"
+    ]
+    
+    env_status = {}
+    for var in expected_vars:
+        value = os.environ.get(var)
+        if value:
+            # Mostrar solo los primeros y últimos caracteres para seguridad
+            if len(value) > 20:
+                masked = f"{value[:10]}...{value[-10:]}"
+            else:
+                masked = f"{value[:5]}...{value[-2:]}"
+            env_status[var] = f"SET ({len(value)} chars): {masked}"
+        else:
+            env_status[var] = "NOT SET"
+    
+    return jsonify({
+        "status": "debug",
+        "environment_variables": env_status,
+        "total_env_vars": len(os.environ)
+    })
