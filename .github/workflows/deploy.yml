@@ -48,10 +48,10 @@ jobs:
             ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           EOF
 
-      - name: Build and push Docker image
+      - name: Build with Cloud Build
         run: |
-          docker build -t gcr.io/$GCP_PROJECT_ID/discana-api:${SHORT_SHA} .
-          docker push gcr.io/$GCP_PROJECT_ID/discana-api:${SHORT_SHA}
+          gcloud builds submit \
+            --tag gcr.io/$GCP_PROJECT_ID/discana-api:${SHORT_SHA}
 
       - name: Deploy to Cloud Run
         run: |
