@@ -28,10 +28,40 @@ jobs:
           project_id: ${{ env.GCP_PROJECT_ID }}
           version: 'latest'
 
-      - name: Verify authenticated account
-        run: gcloud auth list
-        
+      - name: Create environment variables file
+        run: |
+          cat > env-vars.yaml << EOF
+          API_VERSION: v2
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_SECRET: ${{ secrets.SPOTIFY_SECRET }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
+          DISCOGS_API_KEY: ${{ secrets.DISCOGS_API_KEY }}
+          DISCOGS_API_SECRET: ${{ secrets.DISCOGS_API_SECRET }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          API_URL: ${{ secrets.API_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ADMIN_TOKENS: ${{ secrets.ADMIN_TOKENS }}
+          GOOGLE_CREDENTIALS_JSON: |
+            ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          EOF
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t gcr.io/$GCP_PROJECT_ID/discana-api:${SHORT_SHA} .
+          docker push gcr.io/$GCP_PROJECT_ID/discana-api:${SHORT_SHA}
+
       - name: Deploy to Cloud Run
         run: |
-          gcloud builds submit --config cloudbuild.yaml \
-            --substitutions=_SHORT_SHA=${SHORT_SHA:0:7},_API_VERSION='v2',_MONGO_URI='${{ secrets.MONGO_URI }}',_ENCRYPTION_KEY='${{ secrets.ENCRYPTION_KEY }}',_SPOTIFY_CLIENT_ID='${{ secrets.SPOTIFY_CLIENT_ID }}',_SPOTIFY_SECRET='${{ secrets.SPOTIFY_SECRET }}',_LASTFM_API_KEY='${{ secrets.LASTFM_API_KEY }}',_LASTFM_API_SECRET='${{ secrets.LASTFM_API_SECRET }}',_DISCOGS_API_KEY='${{ secrets.DISCOGS_API_KEY }}',_DISCOGS_API_SECRET='${{ secrets.DISCOGS_API_SECRET }}',_FRONTEND_URL='${{ secrets.FRONTEND_URL }}',_API_URL='${{ secrets.API_URL }}',_MEMORY='3Gi',_CPU='2',_GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}',_ADMIN_TOKENS='${{ secrets.ADMIN_TOKENS }}',_GOOGLE_CREDENTIALS_JSON='${{ secrets.GOOGLE_CREDENTIALS_JSON }}'
+          gcloud run deploy discana-api \
+            --image gcr.io/$GCP_PROJECT_ID/discana-api:${SHORT_SHA} \
+            --region europe-west1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 3Gi \
+            --cpu 2 \
+            --timeout 900 \
+            --concurrency 10 \
+            --env-vars-file env-vars.yaml
