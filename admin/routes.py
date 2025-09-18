@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 from admin.services import dump_google_sheet_data_to_db
 
 # Configure Blueprint and logging
-admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+admin_bp = Blueprint("admin", __name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 @admin_bp.route("/dump-google-sheet-data-to-db", methods=["POST"])
