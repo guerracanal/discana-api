@@ -9,23 +9,11 @@ Authorization: {{authHeader}}
 
 {
     "spreadsheet": "Inventario Discos",
-    "sheet": "Discos",
-    "collection": "albums"
+    "sheets": ["Discos", "Cartas"],
+    "collection": "albums",
+    "overwrite": true
 }
 
-###
-
-# Cartas
-POST {{baseUrl}}/admin/dump-google-sheet-data-to-db
-Content-Type: application/json
-
-{
-    "spreadsheet": "Inventario Discos",
-    "sheet": "Cartas",
-    "collection": "albums"
-}
-
-###
 
 # Pendientes
 POST {{baseUrl}}/admin/dump-google-sheet-data-to-db
@@ -33,8 +21,9 @@ Content-Type: application/json
 
 {
     "spreadsheet": "Inventario Discos",
-    "sheet": "Pendientes",
-    "collection": "albums"
+    "sheets": ["Pendientes"],
+    "collection": "albums_ptes",
+    "overwrite": true
 }
 
 ###
@@ -60,3 +49,14 @@ Content-Type: application/json
     "sheet": "Genres",
     "collection": "genres"
 }
+
+### DEBUG
+GET {{baseUrl}}/admin/debug/env
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+### DEBUG
+GET {{baseUrl}}/admin/debug/google-creds
+Content-Type: application/json
+Authorization: {{authHeader}}
+
