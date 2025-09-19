@@ -74,27 +74,3 @@ def dump_google_sheet_data_to_db(spreadsheet, sheet, collection_name):
         if client:
             client.close()
             logging.info("MongoDB connection closed.")
-
-# En admin/routes.py
-@admin_blueprint.route("/debug/google-creds", methods=["GET"])
-def debug_google_creds():
-    """Debug para verificar GOOGLE_CREDENTIALS_JSON"""
-    import os
-    
-    google_creds = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-    
-    if google_creds:
-        return jsonify({
-            "status": "FOUND",
-            "length": len(google_creds),
-            "starts_with": google_creds[:50] if len(google_creds) > 50 else google_creds,
-            "is_valid_json": "yes" if google_creds.startswith('{') else "no"
-        })
-    else:
-        # Listar todas las variables de entorno que empiecen con GOOGLE
-        all_vars = {k: "SET" for k in os.environ.keys() if "GOOGLE" in k.upper()}
-        return jsonify({
-            "status": "NOT_FOUND",
-            "google_vars": all_vars,
-            "total_env_vars": len(os.environ)
-        })
