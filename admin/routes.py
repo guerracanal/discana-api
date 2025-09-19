@@ -3,10 +3,10 @@ from flask import Blueprint, jsonify, request
 from admin.services import dump_google_sheet_data_to_db
 
 # Configure Blueprint and logging
-admin_bp = Blueprint("admin", __name__)
+admin_blueprint = Blueprint("admin", __name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-@admin_bp.route("/dump-google-sheet-data-to-db", methods=["POST"])
+@admin_blueprint.route("/dump-google-sheet-data-to-db", methods=["POST"])
 def dump_google_sheet_data_to_db_route():
     """
     API endpoint to trigger dumping data from Google Sheets to a MongoDB collection.
@@ -68,7 +68,7 @@ def dump_google_sheet_data_to_db_route():
         }), 500
 
 # Debugging routes (remain unchanged)
-@admin_bp.route("/debug/env", methods=["GET"])
+@admin_blueprint.route("/debug/env", methods=["GET"])
 def debug_env_vars():
     import os
     expected_vars = ["GOOGLE_CREDENTIALS_JSON", "MONGO_URI", "GEMINI_API_KEY", "ADMIN_TOKENS"]
@@ -82,7 +82,7 @@ def debug_env_vars():
             env_status[var] = "NOT SET"
     return jsonify({"status": "debug", "environment_variables": env_status, "total_env_vars": len(os.environ)})
 
-@admin_bp.route("/debug/google-creds", methods=["GET"])
+@admin_blueprint.route("/debug/google-creds", methods=["GET"])
 def debug_google_creds():
     import os
     google_creds = os.environ.get("GOOGLE_CREDENTIALS_JSON")
