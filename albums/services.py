@@ -1,5 +1,5 @@
 from utils.constants import Parameters
-from utils.helpers import build_format_filter, execute_paginated_query, extract_year, get_albums_by_all_compilations, get_albums_by_all_genres, get_albums_by_all_moods, get_albums_by_any_compilations, get_albums_by_any_genres, get_albums_by_any_moods, pipeline_to_query
+from utils.helpers import build_format_filter, create_case_insensitive_regex, execute_paginated_query, extract_year, get_albums_by_all_compilations, get_albums_by_all_genres, get_albums_by_all_moods, get_albums_by_any_compilations, get_albums_by_any_genres, get_albums_by_any_moods, pipeline_to_query
 from db import mongo
 from logging_config import logger
 from datetime import datetime, timedelta
@@ -61,7 +61,7 @@ def get_albums_by_artist(
     collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
-    query = {"artist": {"$regex": f".*{artist}.*", "$options": "i"}}
+    query = {"artist": create_case_insensitive_regex(artist)}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_albums_by_title(
@@ -76,7 +76,7 @@ def get_albums_by_title(
     collection_name: str = Parameters.ALBUMS,
     **kwargs 
 ) -> tuple:
-    query = {"title": {"$regex": f".*{title}.*", "$options": "i"}}
+    query = {"title": create_case_insensitive_regex(title)}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_albums_by_country(
@@ -91,7 +91,7 @@ def get_albums_by_country(
     collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
-    query = {"country": {"$regex": f".*{country}.*", "$options": "i"}}
+    query = {"country": create_case_insensitive_regex(country)}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 def get_albums_by_genres(
@@ -170,7 +170,7 @@ def get_albums_by_format(
     collection_name: str = Parameters.ALBUMS,
     **kwargs
 ) -> tuple:
-    query = {"format": {"$regex": f".*{format}.*", "$options": "i"}}
+    query = {"format": create_case_insensitive_regex(format)}
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
 # Obtener discos por año de lanzamiento
@@ -866,8 +866,8 @@ def get_album_by_title_and_artist(
 def _get_album_from_mongo(collection_name: str, title: str, artist: str) -> dict:
     """Obtiene el álbum desde MongoDB."""
     album = mongo.db[collection_name].find_one({
-        "title": {"$regex": f".*{title}.*", "$options": "i"},
-        "artist": {"$regex": f".*{artist}.*", "$options": "i"}
+        "title": create_case_insensitive_regex(title),
+        "artist": create_case_insensitive_regex(artist)
     })
     if album:
         album["_id"] = str(album["_id"])
@@ -1289,7 +1289,7 @@ def find_album_collection_service(album_id=None, spotify_id=None, title=None, co
         if spotify_id:
             query["spotify_id"] = spotify_id
         if title:
-            query["title"] = {"$regex": f".*{title}.*", "$options": "i"}
+            query["title"] = create_case_insensitive_regex(title)
         if not query:
             continue
         album = mongo.db[collection].find_one(query)
