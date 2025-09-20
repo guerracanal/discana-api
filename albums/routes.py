@@ -222,7 +222,16 @@ def get_by_tracks(collection_name, tracks, **params):
         **params
     )      
 
-
+# Get New Releases
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.RELEASE}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_releases(collection_name, days, **params):
+   return get_new_releases(
+        collection_name=collection_name,
+        days=days,
+        **params
+    )
 
 # Get Anniversary Albums
 @albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.ANNIVERSARY}/', methods=['GET'])
