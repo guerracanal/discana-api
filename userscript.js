@@ -35,13 +35,13 @@
         const btn = document.createElement('button');
         btn.id = 'discana-btn';
         btn.style.marginLeft = '10px';
-        btn.style.background = collection === 'albums' ? '#4caf50' : (collection === 'albums_ptes' ? '#ff9800' : '#f44336');
+        btn.style.background = collection === 'albums' ? '#4caf50' : (collection === 'pendientes' ? '#ff9800' : '#f44336');
         btn.style.color = '#fff';
         btn.style.border = 'none';
         btn.style.padding = '8px 12px';
         btn.style.borderRadius = '999px';
         btn.style.cursor = 'pointer';
-        btn.textContent = collection === 'albums' ? 'En colección' : (collection === 'albums_ptes' ? 'Pendiente' : 'Añadir');
+        btn.textContent = collection === 'albums' ? 'En colección' : (collection === 'pendientes' ? 'Pendiente' : 'Añadir');
         btn.onclick = () => showForm(albumData, collection);
         actionBar.appendChild(btn);
     }
@@ -248,7 +248,7 @@
         body.appendChild(labCol);
         const selectCol = document.createElement('select');
         selectCol.name = 'collection';
-        ['', 'albums','albums_ptes'].forEach(opt => {
+        ['', 'albums','pendientes'].forEach(opt => {
             const o = document.createElement('option');
             o.value = opt;
             o.textContent = opt || '(vacío)';

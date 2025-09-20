@@ -246,6 +246,84 @@ def get_albums_by_decade(
     }
     return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
 
+def get_albums_by_duration(
+    duration_min: int = None,
+    duration_max: int = None,
+    filter: str = Parameters.ALL,
+    page: int = 1,
+    per_page: int = 10,
+    rnd: bool = False,
+    min: int = None,
+    max: int = None,
+    collection_name: str = Parameters.ALBUMS,
+    **kwargs
+) -> tuple:
+    query = {}
+    if duration_min is not None and duration_max is not None:
+        query["duration"] = {"$gte": duration_min, "$lte": duration_max}
+    elif duration_min is not None:
+        query["duration"] = {"$gte": duration_min}
+    elif duration_max is not None:
+        query["duration"] = {"$lte": duration_max}
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
+
+def get_albums_by_duration_min(
+    duration_min: int,
+    filter: str = Parameters.ALL,
+    page: int = 1,
+    per_page: int = 10,
+    rnd: bool = False,
+    min: int = None,
+    max: int = None,
+    collection_name: str = Parameters.ALBUMS,
+    **kwargs
+) -> tuple:
+    query = {"duration": {"$gte": duration_min}}
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
+
+def get_albums_by_duration_max(
+    duration_max: int,
+    filter: str = Parameters.ALL,
+    page: int = 1,
+    per_page: int = 10,
+    rnd: bool = False,
+    min: int = None,
+    max: int = None,
+    collection_name: str = Parameters.ALBUMS,
+    **kwargs
+) -> tuple:
+    query = {"duration": {"$lte": duration_max}}
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
+
+def get_albums_by_label(
+    label: str,
+    filter: str = Parameters.ALL,
+    page: int = 1,
+    per_page: int = 10,
+    rnd: bool = False,
+    min: int = None,
+    max: int = None,
+    collection_name: str = Parameters.ALBUMS,
+    **kwargs
+) -> tuple:
+    query = {"label": create_case_insensitive_regex(label)}
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
+
+def get_albums_by_tracks(
+    tracks: int,
+    filter: str = Parameters.ALL,
+    page: int = 1,
+    per_page: int = 10,
+    rnd: bool = False,
+    min: int = None,
+    max: int = None,
+    collection_name: str = Parameters.ALBUMS,
+    **kwargs
+) -> tuple:
+    query = {"tracks": tracks}
+    return base_album_service(query, filter, page, per_page, rnd, min, max, collection_name)
+
+
 def get_new_releases(
     days: int,
     filter: str = Parameters.ALL,
@@ -1278,7 +1356,7 @@ def move_album_service(origin_collection, dest_collection, album_id):
 def find_album_collection_service(album_id=None, spotify_id=None, title=None, collections=None):
     from bson import ObjectId
     if collections is None:
-        collections = ["albums", "albums_ptes"]
+        collections = ["albums", "pendientes"]
     for collection in collections:
         query = {}
         if album_id:
