@@ -3,18 +3,21 @@ Título: {album_title}
 Artista: {artist}
 Sello: {label}
 Fecha de lanzamiento: {release_date}
-País: {country}
 
 Devuelve únicamente un JSON válido con **exactamente** estos cinco atributos:
 
 - "primary_genres": lista de 2 a 4 géneros principales.
 - "secondary_genres": lista de géneros secundarios (puede estar vacía).
 - "descriptors": lista de etiquetas descriptivas tomadas ÚNICAMENTE del listado proporcionado (4-10 etiquetas).
+- "compilations": lista de compilaciones según etiquetas descriptivas y caracteristicas del lanzamiento. (puede estar vacía).
 - "description": texto en español sobre el lanzamiento (puede estar vacío si no tienes información fiable).
 - "country": código ISO de dos letras del país del artista.
 
 **DESCRIPTORS VÁLIDOS - SOLO puedes usar etiquetas de esta lista:**
 angry, aggressive, anxious, bittersweet, calm, meditative, disturbing, energetic, manic, happy, playful, lethargic, longing, mellow, soothing, passionate, quirky, romantic, sad, depressive, lonely, melancholic, sombre, sensual, sentimental, uplifting, triumphant, apocalyptic, cold, dark, funereal, infernal, ominous, scary, epic, ethereal, futuristic, hypnotic, martial, mechanical, medieval, mysterious, natural, aquatic, desert, forest, rain, tropical, nocturnal, party, pastoral, peaceful, psychedelic, ritualistic, seasonal, autumn, spring, summer, winter, space, spiritual, surreal, suspenseful, tribal, urban, warm, bright, storm, beach, hazy, tone, altruistic, apathetic, boastful, cryptic, deadpan, hateful, humorous, insecure, menacing, misanthropic, optimistic, pessimistic, poetic, provocative, rebellious, sarcastic, satirical, serious, vulgar, dark humor, anthemic, atmospheric, atonal, avant-garde, chaotic, complex, dense, dissonant, eclectic, heavy, lush, melodic, microtonal, minimalistic, noisy, polyphonic, progressive, raw, repetitive, rhythmic, soft, sparse, technical, polyrhythmic, theatrical, bouncy, angular, maximalist, piercing, smooth, punchy, lyrical dissonance, narrative, stream of consciousness, crime, death, suicide, drugs, alcohol, violence, war, self-hatred, nihilistic, macabre, homicide, fantasy, folklore, mythology, occult, paranormal, science fiction, dreams, spirituality, introspective, alienation, political, protest, socialism, anarchism, nationalism, propaganda, anti-religious, feminism, LGBTQ, transgender, lesbian, gay, nonbinary, holiday, Christmas, Halloween, Carnaval, travel, food, leisure, dancing, video games, film, music, religious, Christian, Islamic, Hindu, Sikh, Buddhist, Bahá'í, Judaic, Rastafari, pagan, family, friendship, parenthood, love, breakup, infidelity, ageing, childhood, mental health, health, social issues, regret, envy, obsession, grief, anxiety, self-love, loyalty, failure, community, comics, internet, gambling, hallucinogens, wrestling, anime and manga, escapism, cocaine, opioids, cannabis, police, prison, pirates, guns, addiction, history, antiquity, conspiracy, cyberpunk, philosophy, existential, dystopian, literature, ballad, carol, children's music, fairy tale, lullaby, nursery rhyme, concept album, rock opera, concerto, ensemble, a cappella, acoustic, androgynous vocals, chamber music, string quartet, choral, female vocalist, instrumental, male vocalist, nonbinary vocalist, orchestral, vocal group, hymn, jingle, madrigal, mashup, medley, monologue, novelty, opera, oratorio, parody, poem, section, interlude, intro, movement, outro, reprise, silence, skit, sonata, stem, suite, symphony, tone poem, waltz, duet, diss, posse cut, pastiche, composition, aleatory, generative music, improvisation, uncommon time signatures, production, lobit, lo-fi, sampling, Wall of Sound, through-composed, call and response, jamming, free rhythm, triple metre, rubato
+
+**COMPILATIONS VÁLIDOS - SOLO puedes usar etiquetas de esta lista:**
+relax, energic, english, spanish, japanese, other languages, instrumental
 
 **Instrucciones estrictas para DESCRIPTION:**
 - Describe el lanzamiento de forma precisa y factual
@@ -30,6 +33,12 @@ angry, aggressive, anxious, bittersweet, calm, meditative, disturbing, energetic
 - Que sean coherentes con el lanzamiento
 - Si no puedes elegir etiquetas apropiadas de la lista, deja el array VACÍO []
 
+**Instrucciones estrictas para COMPILATIONS:**
+- Calcula si es relax o energic, no tiene sentido que sea ambas y podria no ser ninguno
+- Puede tener varias compilaciones o ninguna.
+- Calcula el idioma del lanzamiento y añadelo como etiqueta "other languages" pretende ser un contenedor para idiomas que no tienen compilacion principal.
+- Si no puedes elegir etiquetas apropiadas de la lista, deja el array VACÍO []
+
 **Instrucciones estrictas para COUNTRY:**
 - Debe ser un código ISO 3166-1 alpha-2 de dos letras.
 - Si no tienes información fiable sobre el país del artista, deja el campo VACÍO ("")
@@ -39,6 +48,7 @@ angry, aggressive, anxious, bittersweet, calm, meditative, disturbing, energetic
 2. No pongas comillas adicionales ni escapes innecesarios.
 3. Usa listas en formato JSON válido.
 4. El atributo description debe ser string (puede ser vacío "").
+4. El atributo compilations debe ser string (puede ser vacío "").
 5. El atributo country debe ser string (puede ser vacío "").
 
 Ejemplo:
@@ -46,6 +56,7 @@ Ejemplo:
     "primary_genres": ["Rock", "Alternative"],
     "secondary_genres": ["Indie", "Post-punk"],
     "descriptors": ["melancholic", "energetic", "raw", "rebellious"],
+    "compilations": ["energic", "english"],
     "description": "El segundo álbum de la banda de Seattle...",
     "country": "US"
 }}
