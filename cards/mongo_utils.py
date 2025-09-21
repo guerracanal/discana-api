@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://guerracanal:mellonella57@discana.tnsuc.mongodb.net/?retryWrites=true&w=majority&appName=discana')
+MONGO_URI = os.getenv('MONGO_URI', '')
 
 client = MongoClient(MONGO_URI)
 db = client['discana']

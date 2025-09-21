@@ -19,6 +19,11 @@ from albums.services import (
     get_albums_by_year, 
     get_albums_by_year_range,
     get_albums_by_decade,
+    get_albums_by_duration,
+    get_albums_by_duration_min,
+    get_albums_by_duration_max,
+    get_albums_by_label,
+    get_albums_by_tracks,
     get_new_releases,
     get_anniversary_albums,
     get_albums_by_type_service,
@@ -30,7 +35,7 @@ from albums.services import (
     get_album_details,
     get_album_of_the_day,
     move_album_service,
-    update_album_service,  # <-- Agrega esta importación
+    update_album_service,
 )
 from spotify.services import (
     get_albums_spotify,
@@ -163,6 +168,59 @@ def get_by_decade(collection_name, decade, **params):
         decade=decade,
         **params
     )
+
+# Get Albums by Duration
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.DURATION}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_duration(collection_name, duration_min, duration_max, **params):
+    return get_albums_by_duration(
+        collection_name=collection_name,
+        duration_min=duration_min,
+        duration_max=duration_max,
+        **params
+    )
+
+# Get New Duration Min
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.DURATION_MIN}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_duration_min(collection_name, duration_min, **params):
+    return get_albums_by_duration_min(
+        collection_name=collection_name,
+        duration_min=duration_min,
+        **params
+    )       
+# Get New Duration Max
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.DURATION_MAX}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_duration_max(collection_name, duration_max, **params):
+    return get_albums_by_duration_max(
+        collection_name=collection_name,
+        duration_max=duration_max,
+        **params
+    )   
+# Get Albums by Label
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.LABEL}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_label(collection_name, label, **params):
+    return get_albums_by_label(
+        collection_name=collection_name,
+        label=label,
+        **params
+    )      
+# Get Albums by Tracks
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.TRACKS}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_tracks(collection_name, tracks, **params):
+    return get_albums_by_tracks(
+        collection_name=collection_name,
+        tracks=tracks,
+        **params
+    )      
 
 # Get New Releases
 @albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.RELEASE}/', methods=['GET'])

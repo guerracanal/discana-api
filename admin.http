@@ -22,7 +22,7 @@ Content-Type: application/json
 {
     "spreadsheet": "Inventario Discos",
     "sheets": ["Pendientes"],
-    "collection": "albums_ptes",
+    "collection": "pendientes",
     "overwrite": true
 }
 

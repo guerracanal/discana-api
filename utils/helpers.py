@@ -4,6 +4,7 @@ from logging_config import logger
 from flask import jsonify, request
 from functools import wraps
 import os
+import re
 
 
 def convert_id(album):
@@ -61,6 +62,14 @@ def build_format_filter(filter: str) -> dict:
     if filter == "spotify":
         return {"format": {"$not": {"$elemMatch": {"$regex": r"^(CD|vinilo)$", "$options": "i"}}}}
     return {}
+
+def create_case_insensitive_regex(value, exact_match=False):
+    """Creates a case-insensitive regex for MongoDB queries."""
+    if exact_match:
+        return re.compile(f"^{re.escape(value)}$", re.IGNORECASE)
+    else:
+        return re.compile(f".*{re.escape(value)}.*", re.IGNORECASE)
+
 
 def execute_paginated_query(base_query: dict, 
                           page: int, 
@@ -197,10 +206,11 @@ def pipeline_to_query(pipeline: list) -> dict:
 
 def get_albums_by_any_genres(genres):
     logger.info(f"Any Genres: {genres}")
-    return{
+    regex_genres = [create_case_insensitive_regex(genre, exact_match=True) for genre in genres]
+    return {
         "$or": [
-            {"genre": {"$in": genres}},
-            {"subgenres": {"$in": genres}}
+            {"genre": {"$in": regex_genres}},
+            {"subgenres": {"$in": regex_genres}}
         ]
     }
 
@@ -210,16 +220,17 @@ def get_albums_by_all_genres(genres):
         "$and": [
             {
                 "$or": [
-                    {"genre": {"$regex": f"^{genre}$", "$options": "i"}},
-                    {"subgenres": {"$regex": f"^{genre}$", "$options": "i"}}
+                    {"genre": create_case_insensitive_regex(genre, exact_match=True)},
+                    {"subgenres": create_case_insensitive_regex(genre, exact_match=True)}
                 ]
             } for genre in genres
         ]
     }
 def get_albums_by_any_moods(moods):
+    regex_moods = [create_case_insensitive_regex(mood, exact_match=True) for mood in moods]
     return {
         "$or": [
-            {"mood": {"$in": moods}},
+            {"mood": {"$in": regex_moods}},
         ]
     }
    
@@ -228,16 +239,17 @@ def get_albums_by_all_moods(moods):
         "$and": [
             {
                 "$or": [
-                    {"mood": {"$regex": f"^{mood}$", "$options": "i"}},
+                    {"mood": create_case_insensitive_regex(mood, exact_match=True)},
                 ]
             } for mood in moods
         ]
     }
 
 def get_albums_by_any_compilations(compilations):
+    regex_compilations = [create_case_insensitive_regex(compilation, exact_match=True) for compilation in compilations]
     return{
         "$or": [
-            {"compilations": {"$in": compilations}},
+            {"compilations": {"$in": regex_compilations}},
         ]
     }
 
@@ -246,7 +258,7 @@ def get_albums_by_all_compilations(compilations):
         "$and": [
             {
                 "$or": [
-                    {"compilations": {"$regex": f"^{compilation}$", "$options": "i"}},
+                    {"compilations": create_case_insensitive_regex(compilation, exact_match=True)},
                 ]
             } for compilation in compilations
         ]
