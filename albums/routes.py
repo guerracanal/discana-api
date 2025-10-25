@@ -36,6 +36,7 @@ from albums.services import (
     get_album_of_the_day,
     move_album_service,
     update_album_service,
+    add_to_collection_name_service,
 )
 from spotify.services import (
     get_albums_spotify,
@@ -313,7 +314,7 @@ def get_album_detail_by_mongo_id(collection_name):
         return jsonify({"error": "Provide 'mongo_id'"}), 400
 
     return get_album_by_db_id(
-        mongo_id=mongo_id,
+        db_id=mongo_id,
         collection_name=collection_name,
         spotify_user_id=spotify_user_id,
         discogs_user_id=discogs_user_id,
@@ -387,9 +388,10 @@ def get_album_details_route(collection_name):
     # Optional timeout (seconds) for parallel external calls
     timeout_param = request.args.get('sources_timeout')
     try:
-        sources_timeout = int(timeout_param) if timeout_param else 10
+        # If the client does not provide a timeout, we leave it as None (wait for all sources).
+        sources_timeout = int(timeout_param) if timeout_param is not None and timeout_param != "" else None
     except ValueError:
-        sources_timeout = 10
+        sources_timeout = None
 
     return get_album_details(
         collection_name=collection_name,
