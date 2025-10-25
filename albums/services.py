@@ -1130,4 +1130,51 @@ def find_album_collection_service(album_id: str = None, spotify_id: str = None, 
             continue
     return {"error": "Album not found in any collection"}, 404
 
+def get_album_of_the_day(collection_name: str = Parameters.ALBUMS, **kwargs) -> Dict[str, Any]:
+    """
+    Devuelve un álbum distinto cada día para la colección dada.
+    Selecciona el álbum usando el día del año como índice cíclico sobre la lista ordenada por _id.
+    """
+    try:
+        albums = list(mongo.db[collection_name].find({}).sort("_id", 1))
+        total = len(albums)
+        if total == 0:
+            return {"error": "No albums found in collection"}
+        day_of_year = datetime.now().timetuple().tm_yday
+        idx = (day_of_year - 1) % total
+        album = albums[idx]
+        album["_id"] = str(album["_id"])
+        return album
+    except Exception as e:
+        logger.error("Error in get_album_of_the_day: %s", e, exc_info=True)
+        return {"error": "Failed to fetch album of the day"}
+
+def move_album_service(origin_collection: str, dest_collection: str, album_id: str):
+    """
+    Mueve un documento de una colección a otra.
+    - origin_collection: nombre de la colección origen
+    - dest_collection: nombre de la colección destino
+    - album_id: id de MongoDB (string)
+    Devuelve: (response_dict, status_code)
+    """
+    try:
+        album = mongo.db[origin_collection].find_one({"_id": ObjectId(album_id)})
+        if not album:
+            return {"error": "Album not found in origin collection"}, 404
+
+        album_copy = album.copy()
+        album_copy.pop("_id", None)
+
+        insert_result = mongo.db[dest_collection].insert_one(album_copy)
+        delete_result = mongo.db[origin_collection].delete_one({"_id": ObjectId(album_id)})
+
+        return {
+            "moved": True,
+            "new_id": str(insert_result.inserted_id),
+            "deleted": bool(delete_result.deleted_count)
+        }, 200
+    except Exception as e:
+        logger.error(f"Error moving album from {origin_collection} to {dest_collection}: {e}", exc_info=True)
+        return {"error": "Failed to move album"}, 500
+
 # End of file
