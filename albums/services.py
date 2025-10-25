@@ -1093,4 +1093,41 @@ def add_to_collection_name_service(collection_name, album_id, new_collection_nam
         logger.error(f"Error adding to collection_name: {e}", exc_info=True)
         return {"error": "Failed to add to collection_name"}, 500
 
+def find_album_collection_service(album_id: str = None, spotify_id: str = None, title: str = None, collections: Optional[List[str]] = None):
+    """
+    Busca un álbum en una lista de colecciones y devuelve la colección y el documento.
+    Parámetros:
+      - album_id: id de MongoDB (string)
+      - spotify_id: spotify_id del álbum
+      - title: título del álbum (busca case-insensitive)
+      - collections: lista de nombres de colecciones a buscar (por defecto ['albums','pendientes'])
+    Retorna: (response_dict, status_code)
+    """
+    from bson import ObjectId
+    if collections is None:
+        collections = ["albums", "pendientes"]
+    for collection in collections:
+        query = {}
+        if album_id:
+            try:
+                query["_id"] = ObjectId(album_id)
+            except Exception:
+                # si el album_id no es un ObjectId válido, ignorar este criterio
+                pass
+        if spotify_id:
+            query["spotify_id"] = spotify_id
+        if title:
+            query["title"] = create_case_insensitive_regex(title)
+        if not query:
+            continue
+        try:
+            album = mongo.db[collection].find_one(query)
+            if album:
+                album["_id"] = str(album.get("_id"))
+                return {"collection": collection, "album": album}, 200
+        except Exception as e:
+            logger.warning("Error searching collection %s: %s", collection, e)
+            continue
+    return {"error": "Album not found in any collection"}, 404
+
 # End of file
