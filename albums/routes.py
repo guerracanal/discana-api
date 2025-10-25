@@ -319,6 +319,20 @@ def get_album_details_route(collection_name):
     if not (db_id or spotify_id or mbid or discogs_id or (title and artist)):
         return jsonify({"error": "Provide at least one ID (db_id, spotify_id, mbid, discogs_id) or both 'title' and 'artist'"}), 400
 
+    # --- NEW: allow caller to specify which external sources to query ---
+    # Example: ?sources=db,spotify,lastfm  (default: all)
+    sources_param = request.args.get('sources')  # comma separated string e.g. "spotify,discogs"
+    sources = None
+    if sources_param:
+        sources = [s.strip().lower() for s in sources_param.split(',') if s.strip()]
+
+    # Optional timeout (seconds) for parallel external calls
+    timeout_param = request.args.get('sources_timeout')
+    try:
+        sources_timeout = int(timeout_param) if timeout_param else 10
+    except ValueError:
+        sources_timeout = 10
+
     return get_album_details(
         collection_name=collection_name,
         db_id=db_id,
@@ -329,7 +343,9 @@ def get_album_details_route(collection_name):
         artist=artist,
         spotify_user_id=spotify_user_id,
         discogs_user_id=discogs_user_id,
-        lastfm_user_id=lastfm_user_id
+        lastfm_user_id=lastfm_user_id,
+        sources=sources,
+        sources_timeout=sources_timeout
     )
 
 #####################

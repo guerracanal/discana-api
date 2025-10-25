@@ -21,6 +21,11 @@ y el proyecto adhiere a [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.2] - 25/09/2025
+
+### Changed
+- Detail album sources, timeout, pooled
+
 ## [1.1.1] - 13/09/2025
 
 ### Added

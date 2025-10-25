@@ -10,6 +10,10 @@ import requests
 from bson import ObjectId  # Importar ObjectId para manejar IDs de MongoDB
 from urllib.parse import unquote  # Importar para decodificar URL
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional, List, Dict, Any
+import time
+
 from lastfm.services import get_album_info_lastfm, make_lastfm_request
 from spotify.services import make_spotify_request, format_album as format_album_spotify
 from discogs.services import make_discogs_request, format_release as format_album_discogs
@@ -1286,4 +1290,215 @@ def find_album_collection_service(album_id=None, spotify_id=None, title=None, co
                 "album": album
             }, 200
     return {"error": "Album not found in any collection"}, 404
+
+
+
+def _normalize_sources(sources: Optional[List[str]]) -> List[str]:
+    if not sources:
+        return ['db', 'spotify', 'discogs', 'lastfm', 'musicbrainz']
+    # keep only known sources and preserve order
+    known = ['db', 'spotify', 'discogs', 'lastfm', 'musicbrainz']
+    normalized = []
+    for s in sources:
+        s = s.lower()
+        if s in known and s not in normalized:
+            normalized.append(s)
+    if 'db' not in normalized:
+        # always prefer checking DB first if caller didn't explicitly remove it,
+        # but obey caller: if they explicitly provided sources without 'db', don't add it.
+        pass
+    return normalized
+
+def _merge_results(primary: Dict[str, Any], secondary: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge two album dicts: keep primary values, fill missing from secondary."""
+    if not primary:
+        return secondary or {}
+    if not secondary:
+        return primary or {}
+    merged = dict(primary)  # copy primary
+    for k, v in secondary.items():
+        if k not in merged or merged.get(k) in (None, '', [], {}):
+            merged[k] = v
+    return merged
+
+def get_album_details(
+    collection_name: str,
+    db_id: Optional[str] = None,
+    spotify_id: Optional[str] = None,
+    mbid: Optional[str] = None,
+    discogs_id: Optional[str] = None,
+    title: Optional[str] = None,
+    artist: Optional[str] = None,
+    spotify_user_id: Optional[str] = None,
+    discogs_user_id: Optional[str] = None,
+    lastfm_user_id: Optional[str] = None,
+    sources: Optional[List[str]] = None,
+    sources_timeout: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Optimized get_album_details:
+      - Parameter 'sources' controls which external services to call (db, spotify, discogs, lastfm, musicbrainz).
+      - Queries DB first (if requested) and then launches external calls in parallel for requested sources.
+      - Merges results preferring DB/local values, then Spotify, Discogs, LastFM, MusicBrainz.
+      - sources_timeout limits how long we wait for external calls (seconds).
+    """
+    try:
+        normalized_sources = _normalize_sources(sources)
+        logger.info("get_album_details sources=%s timeout=%s", normalized_sources, sources_timeout)
+
+        result = {}
+
+        # 1) DB/local lookup (fast) - short-circuit if complete and caller only wants DB
+        if 'db' in normalized_sources and db_id:
+            try:
+                # Assumes helper exists in this module
+                result = get_album_by_db_id(mongo_id=db_id, collection_name=collection_name)
+                if result:
+                    logger.debug("Found album in DB by db_id")
+            except Exception as e:
+                logger.warning("DB lookup by id failed: %s", e)
+
+        # If no db_id but spotify_id/mbid provided and DB requested, try DB by those ids
+        if 'db' in normalized_sources and not result:
+            try:
+                if spotify_id:
+                    result = get_album_by_spotify_id(spotify_id)
+                    if result:
+                        logger.debug("Found album in DB by spotify_id")
+                if not result and mbid:
+                    result = get_album_by_mbid(mbid)
+                    if result:
+                        logger.debug("Found album in DB by mbid")
+                if not result and discogs_id:
+                    result = get_album_by_discogs_id(discogs_id)
+                    if result:
+                        logger.debug("Found album in DB by discogs_id")
+                if not result and title and artist:
+                    # lightweight DB search for title+artist
+                    found = get_album_by_title_and_artist(collection_name=collection_name, title=title, artist=artist)
+                    if found:
+                        result = found
+                        logger.debug("Found album in DB by title+artist")
+            except Exception as e:
+                logger.warning("DB fallback lookups failed: %s", e)
+
+        # If caller specifically asked only for DB, return now
+        if sources is not None and set(normalized_sources) == {'db'}:
+            return result or {}
+
+        # 2) Prepare external calls for other sources requested (parallel)
+        tasks = {}
+        with ThreadPoolExecutor(max_workers=5) as exe:
+            # Spotify
+            if 'spotify' in normalized_sources:
+                if spotify_id:
+                    tasks[exe.submit(_safe_call, 'spotify_by_id', spotify_id, collection_name, spotify_user_id)] = 'spotify'
+                elif title and artist:
+                    tasks[exe.submit(_safe_call, 'spotify_by_title', title, artist, collection_name, spotify_user_id)] = 'spotify'
+
+            # Discogs
+            if 'discogs' in normalized_sources:
+                if discogs_id:
+                    tasks[exe.submit(_safe_call, 'discogs_by_id', discogs_id, collection_name, discogs_user_id)] = 'discogs'
+                elif title and artist:
+                    tasks[exe.submit(_safe_call, 'discogs_by_title', title, artist, collection_name, discogs_user_id)] = 'discogs'
+
+            # Last.fm
+            if 'lastfm' in normalized_sources:
+                # prefer mbid when available
+                if mbid:
+                    tasks[exe.submit(_safe_call, 'lastfm_by_mbid', mbid, artist, title, lastfm_user_id)] = 'lastfm'
+                elif title and artist:
+                    tasks[exe.submit(_safe_call, 'lastfm_by_title', title, artist, lastfm_user_id)] = 'lastfm'
+
+            # MusicBrainz
+            if 'musicbrainz' in normalized_sources:
+                if mbid:
+                    tasks[exe.submit(_safe_call, 'musicbrainz_by_mbid', mbid)] = 'musicbrainz'
+                elif title and artist:
+                    tasks[exe.submit(_safe_call, 'musicbrainz_by_title', title, artist)] = 'musicbrainz'
+
+            # collect results with optional timeout
+            start = time.time()
+            external_results = {}
+
+            if tasks:
+                # If no timeout requested, wait for all results (no timeout)
+                if sources_timeout is None:
+                    for future in as_completed(tasks.keys()):
+                        src = tasks[future]
+                        try:
+                            res = future.result()  # no timeout
+                            if res:
+                                external_results[src] = res
+                                logger.debug("External %s returned data", src)
+                        except Exception as e:
+                            logger.warning("External call %s failed or timed out: %s", src, e)
+                else:
+                    # behavior when timeout is provided (existing logic)
+                    for future in as_completed(tasks.keys(), timeout=sources_timeout):
+                        src = tasks[future]
+                        try:
+                            res = future.result(timeout=max(0, sources_timeout - (time.time() - start)))
+                            if res:
+                                external_results[src] = res
+                                logger.debug("External %s returned data", src)
+                        except Exception as e:
+                            logger.warning("External call %s failed or timed out: %s", src, e)
+        # ...existing code...
+    except Exception as e:
+        logger.error("get_album_details unexpected error: %s", e, exc_info=True)
+        return {"error": str(e)}
+
+# Helper wrapper to centralize safe calls to existing service helpers.
+def _safe_call(kind: str, *args, **kwargs):
+    """
+    kind values:
+      - 'spotify_by_id', 'spotify_by_title'
+      - 'discogs_by_id', 'discogs_by_title'
+      - 'lastfm_by_mbid', 'lastfm_by_title'
+      - 'musicbrainz_by_mbid', 'musicbrainz_by_title'
+    Adjust these mappings to existing helper function names in your codebase.
+    """
+    try:
+        # Lazy imports to avoid circular deps and reduce import cost when unused
+        if kind.startswith('spotify'):
+            # expected helpers: get_album_by_spotify_id or get_album_by_title_and_artist with spotify flag
+            if kind == 'spotify_by_id':
+                spotify_id = args[0]
+                return get_album_by_spotify_id(spotify_id)
+            else:
+                title, artist = args[0], args[1]
+                # If you have a dedicated function to fetch from Spotify by title/artist, call it.
+                return get_album_by_title_and_artist(title=title, artist=artist, prefer='spotify')
+        if kind.startswith('discogs'):
+            if kind == 'discogs_by_id':
+                discogs_id = args[0]
+                return get_album_by_discogs_id(discogs_id)
+            else:
+                title, artist = args[0], args[1]
+                return get_album_by_title_and_artist(title=title, artist=artist, prefer='discogs')
+        if kind.startswith('lastfm'):
+            # import lastfm helper
+            from lastfm.services import get_album_info_lastfm
+            if kind == 'lastfm_by_mbid':
+                mbid, artist, title, lastfm_user_id = args[0], args[1], args[2], args[3] if len(args) > 3 else None
+                return get_album_info_lastfm(artist=artist, album=title, mbid=mbid, user=lastfm_user_id, include_track_info=True)
+            else:
+                title, artist, lastfm_user_id = args[0], args[1], args[2] if len(args) > 2 else None
+                return get_album_info_lastfm(artist=artist, album=title, user=lastfm_user_id, include_track_info=True)
+        if kind.startswith('musicbrainz'):
+            # If you have a MusicBrainz helper, call it here; otherwise return {}
+            if kind == 'musicbrainz_by_mbid':
+                mbid = args[0]
+                return get_album_by_mbid(mbid)  # reuse existing MBID getter if it queries MusicBrainz
+            else:
+                title, artist = args[0], args[1]
+                return get_album_by_title_and_artist(title=title, artist=artist, prefer='musicbrainz')
+    except Exception as e:
+        logger.warning("_safe_call %s error: %s", kind, e)
+    return {}
+    except Exception as e:
+        logger.warning("_safe_call %s error: %s", kind, e)
+    return {}
 
