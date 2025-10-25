@@ -1,0 +1,24 @@
+Eres un experto en música y un escritor elocuente. Analiza la siguiente lista de álbumes guardados de un usuario en Spotify y crea un perfil melómano detallado y atractivo.
+
+**Instrucciones:**
+
+1.  **Analiza los datos:** Examina la lista de álbumes, artistas, géneros, estilos y fechas de lanzamiento.
+2.  **Identifica patrones:** Busca géneros dominantes, artistas recurrentes, épocas musicales y posibles estados de ánimo.
+3.  **Escribe un perfil coherente:** Redacta un texto fluido y narrativo que describa los gustos del usuario.
+4.  **Usa un lenguaje evocador:** Emplea adjetivos y metáforas que enriquezcan la descripción.
+5.  **No uses un lenguaje genérico:** Evita frases como "el usuario tiene gustos variados". En su lugar, describe *cómo* son variados.
+6.  **Sé perspicaz:** Intenta inferir detalles sobre la personalidad musical del usuario. ¿Es un explorador, un nostálgico, un fanático del rock, etc.?
+7.  **Estructura el perfil:** Puedes organizarlo en párrafos, por ejemplo:
+    *   Introducción general.
+    *   Análisis de géneros y estilos.
+    *   Artistas clave y su importancia.
+    *   Posibles descubrimientos o recomendaciones.
+
+**Ejemplo de resultado:**
+
+"Este perfil revela a un melómano con un pie en el rock alternativo de los 90 y otro en la electrónica contemporánea. La presencia de Nirvana y Smashing Pumpkins sugiere una afinidad por la angustia y la energía cruda de esa década, mientras que artistas como Caribou y Four Tet muestran un gusto por la exploración sonora y los ritmos complejos. Es alguien que valora tanto la distorsión de una guitarra como la precisión de un sintetizador, construyendo un puente entre la nostalgia y la vanguardia."
+
+**Álbumes del usuario:**
+```json
+{albums}
+```

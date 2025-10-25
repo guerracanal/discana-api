@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 from typing import List, Tuple
 from config import Config
@@ -7,6 +7,7 @@ from cryptography.fernet import Fernet
 from db import mongo
 from pymongo import errors
 import hashlib
+import random
 
 # --------------------------
 # Configuración Last.fm
@@ -218,7 +219,7 @@ def _add_track_info_to_album(album_info: dict, artist: str, user: str) -> dict:
         return album_info
 
 def format_album_lastfm(album_data: dict, use_album_info: bool = False) -> dict:
-    """Formatea un álbum de Last.fm, enriqueciendo con get_album_info (opcional)."""
+    """Formatea un álbum de Last.fm, enriqueciendo con get_album_info_lastfm (opcional)."""
     if not isinstance(album_data, dict):
         logger.error(f"Error: album_data is not a dictionary: {album_data}", exc_info=True)
         return {"error": "invalid_album_data"}
@@ -230,7 +231,7 @@ def format_album_lastfm(album_data: dict, use_album_info: bool = False) -> dict:
 
     info_album = {}  # Initialize as empty dictionary
     if use_album_info:
-        info_album = get_album_info(artist_name, album_name, mbid)
+        info_album = get_album_info_lastfm(artist_name, album_name, mbid)
         if not isinstance(info_album, dict):
             logger.warning(f"Unexpected info_album type: {type(info_album)}. Using album_data.")
             info_album = {}
@@ -396,6 +397,63 @@ def get_user_top_albums(**params) -> Tuple[List[dict], int]:
         logger.error(f"Error en top álbumes: {str(e)}", exc_info=True)
         raise
 
+def get_forgotten_albums(user_id: str, days_ago: int = 730, page: int = 1, limit: int = 10) -> Tuple[List[dict], int]:
+    """
+    Devuelve los álbumes más escuchados por un usuario que no ha escuchado recientemente.
+    """
+    try:
+        # 1. Obtener los álbumes más escuchados del usuario (histórico)
+        top_albums, _ = get_user_top_albums(user_id=user_id, period='overall', limit=500)
+
+        # 2. Obtener los álbumes escuchados recientemente
+        from_timestamp = int((datetime.now() - timedelta(days=days_ago)).timestamp())
+        recent_tracks_data = make_lastfm_request(
+            'user.getRecentTracks',
+            user=user_id,
+            limit=1000,
+            from_param=from_timestamp
+        )
+        recent_tracks = recent_tracks_data.get('recenttracks', {}).get('track', [])
+
+        recent_album_keys = set()
+        for track in recent_tracks:
+            artist_name = track.get('artist', {}).get('#text')
+            album_name = track.get('album', {}).get('#text')
+            if artist_name and album_name:
+                recent_album_keys.add(f"{artist_name}_{album_name}")
+
+        # 3. Filtrar los álbumes más escuchados para excluir los recientes
+        forgotten_albums = [
+            album for album in top_albums
+            if f"{album['artist']}_{album['title']}" not in recent_album_keys
+        ]
+
+        # 4. Paginación
+        start = (page - 1) * limit
+        end = start + limit
+        paginated_albums = forgotten_albums[start:end]
+
+        return paginated_albums, len(forgotten_albums)
+
+    except Exception as e:
+        logger.error(f"Error en get_forgotten_albums: {str(e)}", exc_info=True)
+        raise
+
+def get_random_forgotten_album(user_id: str, days_ago: int = 730) -> dict:
+    """
+    Devuelve un álbum aleatorio de los álbumes olvidados de un usuario.
+    """
+    try:
+        forgotten_albums, total = get_forgotten_albums(user_id=user_id, days_ago=days_ago, limit=500)
+        if not forgotten_albums:
+            return {}
+
+        return random.choice(forgotten_albums)
+
+    except Exception as e:
+        logger.error(f"Error en get_random_forgotten_album: {str(e)}", exc_info=True)
+        raise
+
 def get_country_top_albums(country: str, page: int = 1, per_page: int = 20) -> Tuple[List[dict], int]:
     """Álbumes más populares por país"""
     try:
@@ -456,7 +514,7 @@ def get_user_recent_albums(user: str, limit: int = 20) -> List[dict]:
                 album_id = f"{artist}_{album_name}"
                 
                 if album_id not in albums:
-                    full_data = get_album_info(artist, album_name)
+                    full_data = get_album_info_lastfm(artist, album_name)
                     if full_data:
                         albums[album_id] = format_album_lastfm(full_data)
         
@@ -506,7 +564,7 @@ def scrobble_album(username: str, album: str, artist: str, timestamp: int = None
         session_key = get_lastfm_session(username)
 
         # Obtener información del álbum para obtener las pistas
-        album_info = get_album_info(artist=artist, album=album)
+        album_info = get_album_info_lastfm(artist=artist, album=album)
         tracks = album_info.get('tracks', {}).get('track', [])
         if isinstance(tracks, dict):  # Si solo hay una pista, convertirla en lista
             tracks = [tracks]

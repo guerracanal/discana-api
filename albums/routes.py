@@ -19,6 +19,11 @@ from albums.services import (
     get_albums_by_year, 
     get_albums_by_year_range,
     get_albums_by_decade,
+    get_albums_by_duration,
+    get_albums_by_duration_min,
+    get_albums_by_duration_max,
+    get_albums_by_label,
+    get_albums_by_tracks,
     get_new_releases,
     get_anniversary_albums,
     get_albums_by_type_service,
@@ -30,7 +35,7 @@ from albums.services import (
     get_album_details,
     get_album_of_the_day,
     move_album_service,
-    update_album_service,  # <-- Agrega esta importación
+    update_album_service,
 )
 from spotify.services import (
     get_albums_spotify,
@@ -163,6 +168,59 @@ def get_by_decade(collection_name, decade, **params):
         decade=decade,
         **params
     )
+
+# Get Albums by Duration
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.DURATION}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_duration(collection_name, duration_min, duration_max, **params):
+    return get_albums_by_duration(
+        collection_name=collection_name,
+        duration_min=duration_min,
+        duration_max=duration_max,
+        **params
+    )
+
+# Get New Duration Min
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.DURATION_MIN}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_duration_min(collection_name, duration_min, **params):
+    return get_albums_by_duration_min(
+        collection_name=collection_name,
+        duration_min=duration_min,
+        **params
+    )       
+# Get New Duration Max
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.DURATION_MAX}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_duration_max(collection_name, duration_max, **params):
+    return get_albums_by_duration_max(
+        collection_name=collection_name,
+        duration_max=duration_max,
+        **params
+    )   
+# Get Albums by Label
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.LABEL}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_label(collection_name, label, **params):
+    return get_albums_by_label(
+        collection_name=collection_name,
+        label=label,
+        **params
+    )      
+# Get Albums by Tracks
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.TRACKS}/', methods=['GET'])
+@handle_response
+@log_route_info
+def get_by_tracks(collection_name, tracks, **params):
+    return get_albums_by_tracks(
+        collection_name=collection_name,
+        tracks=tracks,
+        **params
+    )      
 
 # Get New Releases
 @albums_blueprint.route(f'/{ParametersValues.COLLECTION}/{Routes.RELEASE}/', methods=['GET'])
@@ -385,7 +443,7 @@ def get_albums_from_spotify(type, **params):
 # Last.FM ENDPOINTS #
 #####################
 
-# Get Saved Albums from Spotify
+# Get Albums from LastFM
 @albums_blueprint.route(f'/{Collections.LASTFM}/{Parameters.ME}/', methods=['GET'])
 @handle_response
 @log_route_info
@@ -447,6 +505,18 @@ def update_album(collection_name, album_id):
         return jsonify({"error": "Missing album data"}), 400
     response, status = update_album_service(collection_name, album_id, data)
     return jsonify(response), status
+
+@albums_blueprint.route(f'/{ParametersValues.COLLECTION}/<album_id>/add_collection', methods=['PUT'])
+@require_admin_token
+@log_route_info
+def add_to_collection_name(collection_name, album_id):
+    data = request.get_json()
+    new_collection_name = data.get("collection_name")
+    if not new_collection_name:
+        return jsonify({"error": "Missing collection_name"}), 400
+    response, status = add_to_collection_name_service(collection_name, album_id, new_collection_name)
+    return jsonify(response), status
+
 
 # Endpoint para borrar álbum
 @albums_blueprint.route(f'/{ParametersValues.COLLECTION}/<album_id>/', methods=['DELETE'])

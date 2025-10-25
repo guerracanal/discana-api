@@ -1,0 +1,62 @@
+@baseUrl = https://discana-api-346921755711.europe-west1.run.app/api/v2/
+
+@authHeader = Bearer YOUR_PROD_API_KEY
+
+# Discos
+POST {{baseUrl}}/admin/dump-google-sheet-data-to-db
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+{
+    "spreadsheet": "Inventario Discos",
+    "sheets": ["Discos", "Cartas"],
+    "collection": "albums",
+    "overwrite": true
+}
+
+
+# Pendientes
+POST {{baseUrl}}/admin/dump-google-sheet-data-to-db
+Content-Type: application/json
+
+{
+    "spreadsheet": "Inventario Discos",
+    "sheets": ["Pendientes"],
+    "collection": "pendientes",
+    "overwrite": true
+}
+
+###
+
+# Descriptores
+POST {{baseUrl}}/admin/dump-google-sheet-data-to-db
+Content-Type: application/json
+
+{
+    "spreadsheet": "Inventario Discos",
+    "sheet": "Descriptors",
+    "collection": "descriptors"
+}
+
+###
+
+# Genres
+POST {{baseUrl}}/admin/dump-google-sheet-data-to-db
+Content-Type: application/json
+
+{
+    "spreadsheet": "Inventario Discos",
+    "sheet": "Genres",
+    "collection": "genres"
+}
+
+### DEBUG
+GET {{baseUrl}}/admin/debug/env
+Content-Type: application/json
+Authorization: {{authHeader}}
+
+### DEBUG
+GET {{baseUrl}}/admin/debug/google-creds
+Content-Type: application/json
+Authorization: {{authHeader}}
+

@@ -473,3 +473,15 @@ def get_releases_from_listening_history(**params) -> List[dict]:
     except Exception as e:
         logger.error(f"Error obteniendo historial para: {str(e)}")
         return []
+
+def get_album_by_id(spotify_id: str, **params) -> dict:
+    """Obtiene los datos de un álbum específico por su ID de Spotify."""
+    try:
+        album_data = make_spotify_request(
+            endpoint=f"albums/{spotify_id}",
+            **params
+        )
+        return format_album(album_data)
+    except Exception as e:
+        logger.error(f"Error obteniendo el álbum {spotify_id}: {str(e)}")
+        return {}
