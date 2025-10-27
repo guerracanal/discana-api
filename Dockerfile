@@ -7,10 +7,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # Minimal system dependencies
 # We only need pkg-config for some Python packages that might compile C extensions.
-# The rest of the previously listed libraries were related to GUI/media processing and are not needed.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+# Use retries and Acquire::Retries to make apt-get robust against transient network/timeouts.
+RUN set -eux; \
+    # try up to 3 times to update/install to mitigate transient network issues
+    for i in 1 2 3; do \
+        apt-get update && \
+        apt-get -o Acquire::Retries=3 install -y --no-install-recommends pkg-config ca-certificates && \
+        break || echo "apt-get attempt $i failed, retrying..." && sleep 5; \
+    done; \
+    rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
 WORKDIR /app

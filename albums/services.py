@@ -1249,3 +1249,38 @@ def get_albums_by_all_moods(moods_list: List[str]) -> dict:
             } for m in regs
         ]
     }
+
+def get_albums_by_any_compilations(compilations_list: List[str]) -> dict:
+    """
+    Query que devuelve álbumes que tengan al menos una de las etiquetas de 'compilations'
+    en el campo 'compilation' o en 'compilations' (case-insensitive).
+    """
+    regs = _make_regex_list(compilations_list)
+    if not regs:
+        return {}
+    return {
+        "$or": [
+            {"compilation": {"$in": regs}},
+            {"compilations": {"$in": regs}}
+        ]
+    }
+
+def get_albums_by_all_compilations(compilations_list: List[str]) -> dict:
+    """
+    Query que devuelve álbumes que tengan todas las etiquetas indicadas en compilations_list.
+    Cada término puede encontrarse en 'compilation' o en 'compilations'.
+    Construido como un $and de $or por cada término.
+    """
+    regs = [c for c in compilations_list if c is not None and str(c).strip()]
+    if not regs:
+        return {}
+    return {
+        "$and": [
+            {
+                "$or": [
+                    {"compilation": create_case_insensitive_regex(c)},
+                    {"compilations": create_case_insensitive_regex(c)}
+                ]
+            } for c in regs
+        ]
+    }
