@@ -1177,4 +1177,75 @@ def move_album_service(origin_collection: str, dest_collection: str, album_id: s
         logger.error(f"Error moving album from {origin_collection} to {dest_collection}: {e}", exc_info=True)
         return {"error": "Failed to move album"}, 500
 
-# End of file
+def _make_regex_list(values: List[str]):
+    """Convertir lista de strings a regex case-insensitive para Mongo queries."""
+    return [create_case_insensitive_regex(v) for v in values if v is not None and str(v).strip()]
+
+def get_albums_by_any_genres(genres_list: List[str]) -> dict:
+    """
+    Query que devuelve álbumes que tengan al menos uno de los géneros indicados
+    en el campo 'genre' o en 'subgenres' (case-insensitive).
+    """
+    regs = _make_regex_list(genres_list)
+    if not regs:
+        return {}
+    return {
+        "$or": [
+            {"genre": {"$in": regs}},
+            {"subgenres": {"$in": regs}}
+        ]
+    }
+
+def get_albums_by_all_genres(genres_list: List[str]) -> dict:
+    """
+    Query que devuelve álbumes que tengan todos los géneros indicados
+    (cada género puede estar en 'genre' o en 'subgenres').
+    Implementación: para cada género creamos un $or, y los combinamos con $and.
+    """
+    regs = [g for g in genres_list if g is not None and str(g).strip()]
+    if not regs:
+        return {}
+    return {
+        "$and": [
+            {
+                "$or": [
+                    {"genre": create_case_insensitive_regex(g)},
+                    {"subgenres": create_case_insensitive_regex(g)}
+                ]
+            } for g in regs
+        ]
+    }
+
+def get_albums_by_any_moods(moods_list: List[str]) -> dict:
+    """
+    Query que devuelve álbumes que tengan al menos uno de los moods indicados
+    en 'mood' o en 'moods' (case-insensitive).
+    """
+    regs = _make_regex_list(moods_list)
+    if not regs:
+        return {}
+    return {
+        "$or": [
+            {"mood": {"$in": regs}},
+            {"moods": {"$in": regs}}
+        ]
+    }
+
+def get_albums_by_all_moods(moods_list: List[str]) -> dict:
+    """
+    Query que devuelve álbumes que tengan todos los moods indicados
+    (cada mood puede estar en 'mood' o en 'moods').
+    """
+    regs = [m for m in moods_list if m is not None and str(m).strip()]
+    if not regs:
+        return {}
+    return {
+        "$and": [
+            {
+                "$or": [
+                    {"mood": create_case_insensitive_regex(m)},
+                    {"moods": create_case_insensitive_regex(m)}
+                ]
+            } for m in regs
+        ]
+    }
